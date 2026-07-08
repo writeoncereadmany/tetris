@@ -28,6 +28,7 @@ impl Application for Tetris {
         Tetris {
             _assets: assets.clone(),
         }
+
     }
 
     fn update(&mut self, input: JoypadState, delta_time: u64, renderer: &mut AssetRenderer, events: &mut Events) {
@@ -35,8 +36,12 @@ impl Application for Tetris {
     }
 
     fn draw(&mut self, renderer: &mut AssetRenderer) {
+        let gameboard = self._assets.maps.get("gameboard");
         renderer.clear();
-        renderer.draw_text("Tetris", "Spritefont_Medium", 160, 120, Alignment::aligned(HorizontalAlignment::CENTER, VerticalAlignment::MIDDLE));
+        for tile in &gameboard.unwrap().tiles {
+            renderer.draw_background_tile(&tile.tile_set_name, tile.id, tile.x * 8, tile.y * 8)
+        }
+        renderer.clear_sprites();
     }
 
     fn play(&mut self, _ctx: &mut AudioContext) {
