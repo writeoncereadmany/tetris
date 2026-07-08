@@ -3,4 +3,11 @@ name = "tetris"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
+derive = { path = "../engine-derive" }
+engine = { path = "../engine" }
+libc = "0.2.174"
+rust-libretro = {  version = "0.3.2", features = [ "unstable-env-commands" ] }
