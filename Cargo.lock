@@ -780,6 +780,7 @@ dependencies = [
  "engine",
  "libc",
  "rust-libretro",
+ "tracing-appender",
 ]
 
 [[package]]

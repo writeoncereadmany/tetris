@@ -1,1 +1,1 @@
-/Applications/RetroArch.app/Contents/MacOS/RetroArch -f -L target/release/libtetris.dylib tetris.tty
+/Applications/RetroArch.app/Contents/MacOS/RetroArch -f -L target/release/libtetris.dylib tetris.ttr
