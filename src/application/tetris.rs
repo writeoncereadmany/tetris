@@ -76,12 +76,12 @@ impl Application for Tetris {
 }
 
 impl Tetris {
-    fn on_event(&mut self, event: &Event, renderer: &mut AssetRenderer) {
+    fn on_event(&mut self, event: &Event, renderer: &mut AssetRenderer, events: &mut Events) {
         event.apply(|Loaded()| {
             self.screen = Box::new(TitleScreen::new(renderer));
         });
         event.apply(|StartGame()| {
-            self.screen = Box::new(GameScreen::new(renderer, &self.assets));
+            self.screen = Box::new(GameScreen::new(renderer, &self.assets, events));
         });
     }
 
@@ -89,7 +89,7 @@ impl Tetris {
         while let Some(event) = events.pop()
         {
             renderer.on_event(&event, events);
-            self.on_event(&event, renderer);
+            self.on_event(&event, renderer, events);
             self.screen.on_event(&event, events);
         }
     }

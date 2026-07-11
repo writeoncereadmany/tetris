@@ -1,3 +1,4 @@
+use std::time::Duration;
 use crate::game::block::Block;
 use crate::game::tetromino::{Rotation, Tetromino};
 use crate::game::{block, tetromino};
@@ -6,6 +7,7 @@ use derive::Event;
 use engine::assets::Assets;
 use engine::events::event::{Event, Events};
 use engine::events::input::ButtonPressed;
+use engine::events::timer::TimerId;
 use engine::renderer::asset_renderer::AssetRenderer;
 use rust_libretro::types::JoypadState;
 
@@ -29,10 +31,11 @@ pub struct GameScreen {
     tetromino: Tetromino,
     position: (i32, i32),
     rotation: Rotation,
+    next_down_timer: TimerId
 }
 
 impl GameScreen {
-    pub fn new(renderer: &mut AssetRenderer, assets: &Assets) -> GameScreen {
+    pub fn new(renderer: &mut AssetRenderer, assets: &Assets, events: &mut Events) -> GameScreen {
         let gameboard = assets.maps.get("gameboard").unwrap();
         renderer.clear();
         for tile in &gameboard.tiles {
@@ -40,11 +43,14 @@ impl GameScreen {
         }
         renderer.clear_sprites();
 
+        let next_down_timer = events.schedule("Game", Duration::from_millis(1_000), Action::Down);
+
         GameScreen {
             well: vec![vec![None; 10]; 20],
             tetromino: tetromino::next_tetromino(),
             position: (4, 19),
             rotation: Rotation::UP,
+            next_down_timer
         }
     }
 
@@ -62,7 +68,6 @@ impl GameScreen {
     fn attempt_move(&mut self, action: &Action, events: &mut Events) {
         let (mut x, mut y) = self.position;
         let mut rotation = self.rotation;
-        let mut tetromino = self.tetromino;
         match action {
             &Action::Left => x = x - 1,
             &Action::Right => x = x + 1,
@@ -70,15 +75,19 @@ impl GameScreen {
             &Action::RotateClockwise => rotation = tetromino::clockwise(&rotation),
             &Action::RotateAnticlockwise => rotation = tetromino::anti_clockwise(&rotation),
         }
-        let new_positions = tetromino::positions(&tetromino, &rotation, &(x, y));
+        let new_positions = tetromino::positions(&self.tetromino, &rotation, &(x, y));
 
         if new_positions.iter().all(|position| self.is_available(position))
         {
             self.position = (x, y);
             self.rotation = rotation;
-            self.tetromino = tetromino;
         } else if action == &Action::Down {
             self.set_tetromino(events);
+        }
+
+        if action == &Action::Down {
+            events.cancel("Game", &self.next_down_timer);
+            self.next_down_timer = events.schedule("Game", Duration::from_millis(1_000), Action::Down);
         }
     }
 
@@ -111,6 +120,8 @@ fn draw_block(renderer: &mut AssetRenderer, block: &Block, x: i32, y: i32) {
 
 impl Screen for GameScreen {
     fn on_event(&mut self, event: &Event, events: &mut Events) {
+        event.apply(|dt| events.elapse("Game", *dt));
+
         event.apply(|ButtonPressed(button)| {
             self.listen_to_input(button, events);
         });
