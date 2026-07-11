@@ -10,5 +10,6 @@ crate-type = ["cdylib"]
 derive = { path = "../engine-derive" }
 engine = { path = "../engine" }
 libc = "0.2.174"
+rand = "0.10.2"
 rust-libretro = {  version = "0.3.2", features = [ "unstable-env-commands" ] }
 tracing-appender = "0.2.5"

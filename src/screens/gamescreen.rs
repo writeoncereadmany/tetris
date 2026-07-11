@@ -4,6 +4,7 @@ use engine::assets::Assets;
 use engine::events::event::{Event, Events};
 use engine::events::input::ButtonPressed;
 use engine::renderer::asset_renderer::AssetRenderer;
+use rand::{Rng, RngExt};
 use rust_libretro::types::JoypadState;
 
 #[derive(Event)]
@@ -51,6 +52,19 @@ enum Tetromino {
     Z,
     O,
     I
+}
+
+fn next_tetromino( ) -> Tetromino {
+    match rand::random_range(0..7) {
+        0 => Tetromino::L,
+        1 => Tetromino::R,
+        2 => Tetromino::T,
+        3 => Tetromino::S,
+        4 => Tetromino::Z,
+        5 => Tetromino::O,
+        6 => Tetromino::I,
+        __ => panic!("Out of range for tetromino")
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -170,7 +184,7 @@ impl GameScreen {
 
         GameScreen {
             well: vec![vec![None; 10]; 20],
-            tetromino: Tetromino::L,
+            tetromino: next_tetromino(),
             position: (4,19),
             rotation: Rotation::UP,
         }
@@ -239,7 +253,7 @@ impl Screen for GameScreen {
         event.apply(|NextPiecePlease()| {
             self.position = (4, 19);
             self.rotation = Rotation::UP;
-            self.tetromino = Tetromino::L;
+            self.tetromino = next_tetromino();
         });
     }
 
