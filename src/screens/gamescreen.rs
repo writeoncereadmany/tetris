@@ -40,26 +40,26 @@ enum Tetromino {
 
 enum Rotation {
     UP,
-    LEFT,
+    RIGHT,
     DOWN,
-    RIGHT
+    LEFT
 }
 
 fn clockwise(rotation: &Rotation) -> Rotation {
     match rotation {
-        Rotation::UP => Rotation::LEFT,
-        Rotation::LEFT => Rotation::DOWN,
-        Rotation::DOWN => Rotation::RIGHT,
-        Rotation::RIGHT => Rotation::UP
+        Rotation::UP => Rotation::RIGHT,
+        Rotation::RIGHT => Rotation::DOWN,
+        Rotation::DOWN => Rotation::LEFT,
+        Rotation::LEFT => Rotation::UP
     }
 }
 
 fn anti_clockwise(rotation: &Rotation) -> Rotation {
     match rotation {
-        Rotation::UP => Rotation::RIGHT,
-        Rotation::LEFT => Rotation::UP,
-        Rotation::DOWN => Rotation::LEFT,
-        Rotation::RIGHT => Rotation::DOWN
+        Rotation::UP => Rotation::LEFT,
+        Rotation::RIGHT => Rotation::UP,
+        Rotation::DOWN => Rotation::RIGHT,
+        Rotation::LEFT => Rotation::DOWN
     }
 }
 
@@ -68,12 +68,58 @@ fn blocks(tetromino: &Tetromino, rotation: &Rotation) -> (Block, [(i32, i32); 4]
         Tetromino::L => {
             match rotation {
                 Rotation::UP => (Block::Orange, [(0, 0), (0, -1), (0, -2), (1, -2)]),
-                Rotation::LEFT => (Block::Orange, [(0, -1), (1, -1), (2, -1), (0, -2)]),
+                Rotation::RIGHT => (Block::Orange, [(0, -1), (1, -1), (2, -1), (0, -2)]),
                 Rotation::DOWN => (Block::Orange, [(1, -1), (1, -2), (1, -3), (0, -1)]),
-                Rotation::RIGHT => (Block::Orange, [(-1, -2), (0, -2), (1, -2), (1, -1)]),
+                Rotation::LEFT => (Block::Orange, [(-1, -2), (0, -2), (1, -2), (1, -1)]),
             }
         }
-        _otherwise => (Block::Purple, [(0, 0), (0, -1), (1, 0), (1, -1)]),
+        Tetromino::R => {
+            match rotation {
+                Rotation::UP => (Block::DarkBlue, [(1, 0), (1, -1), (1, -2), (0, -2)]),
+                Rotation::RIGHT => (Block::DarkBlue, [(0, -1), (0, -2), (1, -2), (2, -2)]),
+                Rotation::DOWN => (Block::DarkBlue, [(0, -1), (0, -2), (0, -3), (1, -1)]),
+                Rotation::LEFT => (Block::DarkBlue, [(-1, -1), (0, -1), (1, -1), (1, -2)]),
+            }
+        }
+        Tetromino::S => {
+            match rotation {
+                Rotation::UP | Rotation::DOWN => (Block::Green, [(0, 0), (0, -1), (1, -1), (1, -2)]),
+                Rotation::RIGHT | Rotation::LEFT => (Block::Green, [(1, -1), (2, -1), (1, -2), (0, -2)]),
+            }
+        }
+        Tetromino::Z => {
+            match rotation {
+                Rotation::UP | Rotation::DOWN => (Block::Gold, [(1, 0), (1, -1), (0, -1), (0, -2)]),
+                Rotation::RIGHT | Rotation::LEFT => (Block::Gold, [(-1, -1), (0, -1), (0, -2), (1, -2)]),
+            }
+        }
+        Tetromino::T => {
+            match rotation {
+                Rotation::UP => (Block::PaleBlue, [(0, -1), (0, 0), (-1, -1), (1, -1)]),
+                Rotation::RIGHT => (Block::PaleBlue, [(0, -1), (0, 0), (1, -1), (0, -2)]),
+                Rotation::DOWN => (Block::PaleBlue, [(0, -1), (1, -1), (-1, -1), (0, -2)]),
+                Rotation::LEFT => (Block::PaleBlue, [(0, -1), (-1, -1), (0, -0), (0, -2)]),
+            }
+        }
+        Tetromino::I => {
+            match rotation {
+                Rotation::UP | Rotation::DOWN=> (Block::Pink, [(0, 0), (0, -1), (0, -2), (0, -3)]),
+                Rotation::RIGHT | Rotation::LEFT => (Block::Pink, [(-1, -1), (0, -1), (1, -1), (2, -1)]),
+            }
+        }
+        Tetromino::O => (Block::Purple, [(0, 0), (0, -1), (1, 0), (1, -1)]),
+    }
+}
+
+fn next(tetronimo : &Tetromino) -> Tetromino {
+    match tetronimo {
+        Tetromino::L => Tetromino::R,
+        Tetromino::R => Tetromino::T,
+        Tetromino::T => Tetromino::S,
+        Tetromino::S => Tetromino::Z,
+        Tetromino::Z => Tetromino::O,
+        Tetromino::O => Tetromino::I,
+        Tetromino::I => Tetromino::L
     }
 }
 
@@ -109,6 +155,7 @@ impl GameScreen {
             &JoypadState::DOWN => self.position = (x, y - 1),
             &JoypadState::A => self.rotation = clockwise(&self.rotation),
             &JoypadState::B => self.rotation = anti_clockwise(&self.rotation),
+            &JoypadState::Y => self.tetromino = next(&self.tetromino),
             _ => {}
         }
     }
