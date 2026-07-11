@@ -1,6 +1,8 @@
 use std::sync::Arc;
+use std::time::Duration;
 use engine::assets::Assets;
-use engine::events::event::Events;
+use engine::events::event::{Event, Events};
+use engine::events::input::fire_input_events;
 use engine::renderer::asset_renderer::AssetRenderer;
 use engine::renderer::spritefont::{Alignment, HorizontalAlignment, VerticalAlignment};
 use engine::retroarch::{Application, ApplicationProperties};
@@ -8,9 +10,16 @@ use rust_libretro::contexts::AudioContext;
 use rust_libretro::input_descriptors;
 use rust_libretro::sys::{retro_input_descriptor, RETRO_DEVICE_ID_JOYPAD_A, RETRO_DEVICE_ID_JOYPAD_B, RETRO_DEVICE_ID_JOYPAD_DOWN, RETRO_DEVICE_ID_JOYPAD_LEFT, RETRO_DEVICE_ID_JOYPAD_RIGHT, RETRO_DEVICE_ID_JOYPAD_START, RETRO_DEVICE_ID_JOYPAD_UP, RETRO_DEVICE_JOYPAD};
 use rust_libretro::types::JoypadState;
+use crate::screens::gamescreen::GameScreen;
+use crate::screens::loadscreen::LoadScreen;
+use crate::screens::Screen;
+use crate::screens::titlescreen::TitleScreen;
+use crate::screens::transitions::{Loaded, StartGame};
 
 pub struct Tetris {
-    _assets: Arc<Assets>,
+    assets: Arc<Assets>,
+    screen: Box<dyn Screen>,
+    previous_joypad_state: JoypadState,
 }
 
 const INPUT_DESCRIPTORS: &[retro_input_descriptor] = &input_descriptors!(
@@ -26,22 +35,29 @@ const INPUT_DESCRIPTORS: &[retro_input_descriptor] = &input_descriptors!(
 impl Application for Tetris {
     fn new(assets: Arc<Assets>, logger_worker: Option<tracing_appender::non_blocking::WorkerGuard>) -> Self {
         Tetris {
-            _assets: assets.clone(),
+            assets: assets.clone(),
+            screen: Box::new(LoadScreen),
+            previous_joypad_state : JoypadState::empty()
         }
-
     }
 
-    fn update(&mut self, input: JoypadState, delta_time: u64, renderer: &mut AssetRenderer, events: &mut Events) {
-        // nothing yet
+    fn update(&mut self, joypad_state: JoypadState, delta_time: u64, renderer: &mut AssetRenderer, events: &mut Events) {
+
+        fire_input_events(joypad_state, self.previous_joypad_state, events);
+        self.previous_joypad_state = joypad_state;
+        self.process_events(renderer, events);
+
+        let dt = Duration::from_micros(delta_time);
+
+        events.elapse("Application", dt);
+        self.process_events(renderer, events);
+
+        events.fire(dt);
+        self.process_events(renderer, events);
     }
 
     fn draw(&mut self, renderer: &mut AssetRenderer) {
-        let gameboard = self._assets.maps.get("gameboard");
-        renderer.clear();
-        for tile in &gameboard.unwrap().tiles {
-            renderer.draw_background_tile(&tile.tile_set_name, tile.id, tile.x * 8, tile.y * 8)
-        }
-        renderer.clear_sprites();
+
     }
 
     fn play(&mut self, _ctx: &mut AudioContext) {
@@ -55,6 +71,26 @@ impl Application for Tetris {
             name: "Tetris".to_string(),
             extensions: &["ttr"],
             input_descriptors: INPUT_DESCRIPTORS,
+        }
+    }
+}
+
+impl Tetris {
+    fn on_event(&mut self, event: &Event, renderer: &mut AssetRenderer) {
+        event.apply(|Loaded()| {
+            self.screen = Box::new(TitleScreen::new(renderer));
+        });
+        event.apply(|StartGame()| {
+            self.screen = Box::new(GameScreen::new(renderer, &self.assets));
+        });
+    }
+
+    fn process_events(&mut self, renderer: &mut AssetRenderer, events: &mut Events) {
+        while let Some(event) = events.pop()
+        {
+            renderer.on_event(&event, events);
+            self.on_event(&event, renderer);
+            self.screen.on_event(&event, events);
         }
     }
 }
