@@ -1,3 +1,4 @@
+use derive::Event;
 use crate::screens::Screen;
 use engine::assets::Assets;
 use engine::events::event::{Event, Events};
@@ -5,7 +6,10 @@ use engine::events::input::ButtonPressed;
 use engine::renderer::asset_renderer::AssetRenderer;
 use rust_libretro::types::JoypadState;
 
-#[derive(Clone)]
+#[derive(Event)]
+struct NextPiecePlease();
+
+#[derive(Copy, Clone)]
 enum Block {
     Purple,
     Orange,
@@ -14,6 +18,16 @@ enum Block {
     Gold,
     DarkBlue,
     Pink
+}
+
+#[derive(Event, Eq, PartialEq)]
+enum Action {
+    Left,
+    Right,
+    Down,
+    RotateClockwise,
+    RotateAnticlockwise,
+    ChangeTetromino // only for debugging purposes - we'll revisit this!
 }
 
 fn sprite(block: &Block) -> &'static str {
@@ -28,6 +42,7 @@ fn sprite(block: &Block) -> &'static str {
     }
 }
 
+#[derive(Copy, Clone)]
 enum Tetromino {
     L,
     R,
@@ -38,6 +53,7 @@ enum Tetromino {
     I
 }
 
+#[derive(Copy, Clone)]
 enum Rotation {
     UP,
     RIGHT,
@@ -160,24 +176,70 @@ impl GameScreen {
         }
     }
 
-    fn attempt_move(&mut self, button: &JoypadState) {
+    fn listen_to_input(&mut self, button: &JoypadState, events: &mut Events) {
         let (x, y) = self.position;
         match button {
-            &JoypadState::LEFT => self.position = (x - 1, y),
-            &JoypadState::RIGHT => self.position = (x + 1, y),
-            &JoypadState::DOWN => self.position = (x, y - 1),
-            &JoypadState::A => self.rotation = clockwise(&self.rotation),
-            &JoypadState::B => self.rotation = anti_clockwise(&self.rotation),
-            &JoypadState::Y => self.tetromino = next(&self.tetromino),
+            &JoypadState::LEFT => events.fire(Action::Left),
+            &JoypadState::RIGHT => events.fire(Action::Right),
+            &JoypadState::DOWN => events.fire(Action::Down),
+            &JoypadState::A => events.fire(Action::RotateClockwise),
+            &JoypadState::B => events.fire(Action::RotateAnticlockwise),
+            &JoypadState::Y => events.fire(Action::ChangeTetromino),
             _ => {}
         }
     }
+
+    fn attempt_move(&mut self, action: &Action, events: &mut Events) {
+        let (mut x, mut y) = self.position;
+        let mut rotation = self.rotation;
+        let mut tetromino = self.tetromino;
+        match action {
+            &Action::Left => x = x - 1,
+            &Action::Right => x  = x + 1,
+            &Action::Down => y = y - 1,
+            &Action::RotateClockwise => rotation = clockwise(&rotation),
+            &Action::RotateAnticlockwise => rotation = anti_clockwise(&rotation),
+            &Action::ChangeTetromino => tetromino = next(&tetromino),
+        }
+        let new_positions = positions(&tetromino, &rotation, &(x, y));
+
+        if new_positions.iter().all(|position| self.is_available(position)) {
+            self.position = (x, y);
+            self.rotation = rotation;
+            self.tetromino = tetromino;
+        }
+        else
+        {
+            if action == &Action::Down {
+                let old_positions = positions(&self.tetromino, &self.rotation, &self.position);
+                let block = block(&self.tetromino);
+                for (x, y) in old_positions {
+                    self.well[y as usize][x as usize] = Some(block);
+                }
+                events.fire(NextPiecePlease())
+            }
+        }
+    }
+
+    fn is_available(&self, &(x, y): &(i32, i32)) -> bool {
+        x >= 0 && x < 10 && y >= 0 && self.well[y as usize][x as usize].is_none()
+    }
+}
+
+fn draw_block(renderer: &mut AssetRenderer, block: &Block, x: i32, y: i32) {
+    renderer.draw_sprite(sprite(&block), x * 8 + 120, y * 8 + 40, false)
 }
 
 impl Screen for GameScreen {
     fn on_event(&mut self, event: &Event, events: &mut Events) {
         event.apply(|ButtonPressed(button)| {
-            self.attempt_move(button);
+            self.listen_to_input(button, events);
+        });
+        event.apply(|action| self.attempt_move(action, events));
+        event.apply(|NextPiecePlease()| {
+            self.position = (4, 19);
+            self.rotation = Rotation::UP;
+            self.tetromino = Tetromino::L;
         });
     }
 
@@ -186,7 +248,14 @@ impl Screen for GameScreen {
         let block = block(&self.tetromino);
         let positions = positions(&self.tetromino, &self.rotation, &self.position);
         for (x, y) in positions {
-            renderer.draw_sprite(sprite(&block), x * 8 + 120, y * 8 + 40, false)
+            draw_block(renderer, &block, x, y);
+        }
+        for (y, row) in self.well.iter().enumerate() {
+            for (x, block) in row.iter().enumerate() {
+                if let Some(block) = block {
+                    draw_block(renderer, &block, x as i32, y as i32)
+                }
+            }
         }
     }
 }
