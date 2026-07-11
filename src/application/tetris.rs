@@ -57,7 +57,7 @@ impl Application for Tetris {
     }
 
     fn draw(&mut self, renderer: &mut AssetRenderer) {
-
+        self.screen.draw(renderer);
     }
 
     fn play(&mut self, _ctx: &mut AudioContext) {
