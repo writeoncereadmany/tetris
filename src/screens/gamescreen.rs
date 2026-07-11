@@ -1,14 +1,16 @@
-use derive::Event;
 use crate::screens::Screen;
+use derive::Event;
 use engine::assets::Assets;
 use engine::events::event::{Event, Events};
 use engine::events::input::ButtonPressed;
 use engine::renderer::asset_renderer::AssetRenderer;
-use rand::{Rng, RngExt};
 use rust_libretro::types::JoypadState;
 
 #[derive(Event)]
 struct NextPiecePlease();
+
+#[derive(Event)]
+struct CheckForLines();
 
 #[derive(Copy, Clone)]
 enum Block {
@@ -27,8 +29,7 @@ enum Action {
     Right,
     Down,
     RotateClockwise,
-    RotateAnticlockwise,
-    ChangeTetromino // only for debugging purposes - we'll revisit this!
+    RotateAnticlockwise
 }
 
 fn sprite(block: &Block) -> &'static str {
@@ -154,18 +155,6 @@ fn positions(tetromino: &Tetromino, rotation: &Rotation, (px, py): &(i32, i32)) 
     positions.map(|(x, y)| (x + px, y + py))
 }
 
-fn next(tetronimo : &Tetromino) -> Tetromino {
-    match tetronimo {
-        Tetromino::L => Tetromino::R,
-        Tetromino::R => Tetromino::T,
-        Tetromino::T => Tetromino::S,
-        Tetromino::S => Tetromino::Z,
-        Tetromino::Z => Tetromino::O,
-        Tetromino::O => Tetromino::I,
-        Tetromino::I => Tetromino::L
-    }
-}
-
 pub struct GameScreen {
     well: Vec<Vec<Option<Block>>>, // outer vec is Y coord, inner is X, to simplify line removal
     tetromino: Tetromino,
@@ -198,7 +187,6 @@ impl GameScreen {
             &JoypadState::DOWN => events.fire(Action::Down),
             &JoypadState::A => events.fire(Action::RotateClockwise),
             &JoypadState::B => events.fire(Action::RotateAnticlockwise),
-            &JoypadState::Y => events.fire(Action::ChangeTetromino),
             _ => {}
         }
     }
@@ -213,7 +201,6 @@ impl GameScreen {
             &Action::Down => y = y - 1,
             &Action::RotateClockwise => rotation = clockwise(&rotation),
             &Action::RotateAnticlockwise => rotation = anti_clockwise(&rotation),
-            &Action::ChangeTetromino => tetromino = next(&tetromino),
         }
         let new_positions = positions(&tetromino, &rotation, &(x, y));
 
@@ -230,13 +217,21 @@ impl GameScreen {
                 for (x, y) in old_positions {
                     self.well[y as usize][x as usize] = Some(block);
                 }
-                events.fire(NextPiecePlease())
+                events.fire(CheckForLines());
+                events.fire(NextPiecePlease());
             }
         }
     }
 
     fn is_available(&self, &(x, y): &(i32, i32)) -> bool {
         x >= 0 && x < 10 && y >= 0 && self.well[y as usize][x as usize].is_none()
+    }
+
+    fn check_for_lines(&mut self) {
+        self.well.retain(|row| row.iter().any(|item| item.is_none()));
+        while self.well.len() < 20 {
+            self.well.push(vec![None; 10]);
+        }
     }
 }
 
@@ -255,6 +250,7 @@ impl Screen for GameScreen {
             self.rotation = Rotation::UP;
             self.tetromino = next_tetromino();
         });
+        event.apply(|CheckForLines()| self.check_for_lines());
     }
 
     fn draw(&mut self, renderer: &mut AssetRenderer) {
