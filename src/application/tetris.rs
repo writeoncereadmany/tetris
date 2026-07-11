@@ -4,7 +4,6 @@ use engine::assets::Assets;
 use engine::events::event::{Event, Events};
 use engine::events::input::fire_input_events;
 use engine::renderer::asset_renderer::AssetRenderer;
-use engine::renderer::spritefont::{Alignment, HorizontalAlignment, VerticalAlignment};
 use engine::retroarch::{Application, ApplicationProperties};
 use rust_libretro::contexts::AudioContext;
 use rust_libretro::input_descriptors;
