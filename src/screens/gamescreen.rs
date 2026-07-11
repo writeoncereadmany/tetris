@@ -54,7 +54,7 @@ impl GameScreen {
         }
     }
 
-    fn listen_to_input(&mut self, button: &JoypadState, events: &mut Events) {
+    fn listen_to_press(&mut self, button: &JoypadState, events: &mut Events) {
         match button {
             &JoypadState::LEFT => events.fire(Action::Left),
             &JoypadState::RIGHT => events.fire(Action::Right),
@@ -112,6 +112,24 @@ impl GameScreen {
             self.well.push(vec![None; 10]);
         }
     }
+
+    fn draw_current_tetromino(&mut self, renderer: &mut AssetRenderer) {
+        let block = tetromino::block(&self.tetromino);
+        let positions = tetromino::positions(&self.tetromino, &self.rotation, &self.position);
+        for (x, y) in positions {
+            draw_block(renderer, &block, x, y);
+        }
+    }
+
+    fn draw_well(&mut self, renderer: &mut AssetRenderer) {
+        for (y, row) in self.well.iter().enumerate() {
+            for (x, block) in row.iter().enumerate() {
+                if let Some(block) = block {
+                    draw_block(renderer, &block, x as i32, y as i32)
+                }
+            }
+        }
+    }
 }
 
 fn draw_block(renderer: &mut AssetRenderer, block: &Block, x: i32, y: i32) {
@@ -123,7 +141,7 @@ impl Screen for GameScreen {
         event.apply(|dt| events.elapse("Game", *dt));
 
         event.apply(|ButtonPressed(button)| {
-            self.listen_to_input(button, events);
+            self.listen_to_press(button, events);
         });
         event.apply(|action| self.attempt_move(action, events));
         event.apply(|NextPiecePlease()| {
@@ -136,17 +154,7 @@ impl Screen for GameScreen {
 
     fn draw(&mut self, renderer: &mut AssetRenderer) {
         renderer.clear_sprites();
-        let block = tetromino::block(&self.tetromino);
-        let positions = tetromino::positions(&self.tetromino, &self.rotation, &self.position);
-        for (x, y) in positions {
-            draw_block(renderer, &block, x, y);
-        }
-        for (y, row) in self.well.iter().enumerate() {
-            for (x, block) in row.iter().enumerate() {
-                if let Some(block) = block {
-                    draw_block(renderer, &block, x as i32, y as i32)
-                }
-            }
-        }
+        self.draw_current_tetromino(renderer);
+        self.draw_well(renderer);
     }
 }
