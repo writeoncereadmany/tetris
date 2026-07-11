@@ -75,8 +75,8 @@ fn anti_clockwise(rotation: &Rotation) -> Rotation {
     }
 }
 
-fn positions(tetromino: &Tetromino, rotation: &Rotation) -> [(i32, i32); 4] {
-    match tetromino {
+fn positions(tetromino: &Tetromino, rotation: &Rotation, (px, py): &(i32, i32)) -> [(i32, i32); 4] {
+    let positions = match tetromino {
         Tetromino::L => {
             match rotation {
                 Rotation::UP => [(0, 0), (0, -1), (0, -2), (1, -2)],
@@ -120,7 +120,8 @@ fn positions(tetromino: &Tetromino, rotation: &Rotation) -> [(i32, i32); 4] {
             }
         }
         Tetromino::O => [(0, 0), (0, -1), (1, 0), (1, -1)],
-    }
+    };
+    positions.map(|(x, y)| (x + px, y + py))
 }
 
 fn next(tetronimo : &Tetromino) -> Tetromino {
@@ -183,10 +184,9 @@ impl Screen for GameScreen {
     fn draw(&mut self, renderer: &mut AssetRenderer) {
         renderer.clear_sprites();
         let block = block(&self.tetromino);
-        let positions = positions(&self.tetromino, &self.rotation);
-        let (px, py) = self.position;
-        for (bx, by) in positions {
-            renderer.draw_sprite(sprite(&block), ((bx + px) * 8) + 120, (by + py) * 8 + 40, false)
+        let positions = positions(&self.tetromino, &self.rotation, &self.position);
+        for (x, y) in positions {
+            renderer.draw_sprite(sprite(&block), x * 8 + 120, y * 8 + 40, false)
         }
     }
 }
