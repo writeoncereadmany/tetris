@@ -49,7 +49,6 @@ impl GameScreen {
     }
 
     fn listen_to_input(&mut self, button: &JoypadState, events: &mut Events) {
-        let (x, y) = self.position;
         match button {
             &JoypadState::LEFT => events.fire(Action::Left),
             &JoypadState::RIGHT => events.fire(Action::Right),
