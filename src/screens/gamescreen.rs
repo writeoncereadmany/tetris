@@ -45,6 +45,18 @@ enum Rotation {
     LEFT
 }
 
+fn block(tetronimo: &Tetromino) -> Block {
+    match tetronimo {
+        Tetromino::L => Block::Orange,
+        Tetromino::R => Block::DarkBlue,
+        Tetromino::T => Block::PaleBlue,
+        Tetromino::S => Block::Green,
+        Tetromino::Z => Block::Purple,
+        Tetromino::O => Block::Gold,
+        Tetromino::I => Block::Pink
+    }
+}
+
 fn clockwise(rotation: &Rotation) -> Rotation {
     match rotation {
         Rotation::UP => Rotation::RIGHT,
@@ -63,51 +75,51 @@ fn anti_clockwise(rotation: &Rotation) -> Rotation {
     }
 }
 
-fn blocks(tetromino: &Tetromino, rotation: &Rotation) -> (Block, [(i32, i32); 4]) {
+fn positions(tetromino: &Tetromino, rotation: &Rotation) -> [(i32, i32); 4] {
     match tetromino {
         Tetromino::L => {
             match rotation {
-                Rotation::UP => (Block::Orange, [(0, 0), (0, -1), (0, -2), (1, -2)]),
-                Rotation::RIGHT => (Block::Orange, [(0, -1), (1, -1), (2, -1), (0, -2)]),
-                Rotation::DOWN => (Block::Orange, [(1, -1), (1, -2), (1, -3), (0, -1)]),
-                Rotation::LEFT => (Block::Orange, [(-1, -2), (0, -2), (1, -2), (1, -1)]),
+                Rotation::UP => [(0, 0), (0, -1), (0, -2), (1, -2)],
+                Rotation::RIGHT => [(0, -1), (1, -1), (2, -1), (0, -2)],
+                Rotation::DOWN => [(1, -1), (1, -2), (1, -3), (0, -1)],
+                Rotation::LEFT => [(-1, -2), (0, -2), (1, -2), (1, -1)],
             }
         }
         Tetromino::R => {
             match rotation {
-                Rotation::UP => (Block::DarkBlue, [(1, 0), (1, -1), (1, -2), (0, -2)]),
-                Rotation::RIGHT => (Block::DarkBlue, [(0, -1), (0, -2), (1, -2), (2, -2)]),
-                Rotation::DOWN => (Block::DarkBlue, [(0, -1), (0, -2), (0, -3), (1, -1)]),
-                Rotation::LEFT => (Block::DarkBlue, [(-1, -1), (0, -1), (1, -1), (1, -2)]),
+                Rotation::UP => [(1, 0), (1, -1), (1, -2), (0, -2)],
+                Rotation::RIGHT => [(0, -1), (0, -2), (1, -2), (2, -2)],
+                Rotation::DOWN => [(0, -1), (0, -2), (0, -3), (1, -1)],
+                Rotation::LEFT => [(-1, -1), (0, -1), (1, -1), (1, -2)],
             }
         }
         Tetromino::S => {
             match rotation {
-                Rotation::UP | Rotation::DOWN => (Block::Green, [(0, 0), (0, -1), (1, -1), (1, -2)]),
-                Rotation::RIGHT | Rotation::LEFT => (Block::Green, [(1, -1), (2, -1), (1, -2), (0, -2)]),
+                Rotation::UP | Rotation::DOWN => [(0, 0), (0, -1), (1, -1), (1, -2)],
+                Rotation::RIGHT | Rotation::LEFT => [(1, -1), (2, -1), (1, -2), (0, -2)],
             }
         }
         Tetromino::Z => {
             match rotation {
-                Rotation::UP | Rotation::DOWN => (Block::Gold, [(1, 0), (1, -1), (0, -1), (0, -2)]),
-                Rotation::RIGHT | Rotation::LEFT => (Block::Gold, [(-1, -1), (0, -1), (0, -2), (1, -2)]),
+                Rotation::UP | Rotation::DOWN => [(1, 0), (1, -1), (0, -1), (0, -2)],
+                Rotation::RIGHT | Rotation::LEFT => [(-1, -1), (0, -1), (0, -2), (1, -2)],
             }
         }
         Tetromino::T => {
             match rotation {
-                Rotation::UP => (Block::PaleBlue, [(0, -1), (0, 0), (-1, -1), (1, -1)]),
-                Rotation::RIGHT => (Block::PaleBlue, [(0, -1), (0, 0), (1, -1), (0, -2)]),
-                Rotation::DOWN => (Block::PaleBlue, [(0, -1), (1, -1), (-1, -1), (0, -2)]),
-                Rotation::LEFT => (Block::PaleBlue, [(0, -1), (-1, -1), (0, -0), (0, -2)]),
+                Rotation::UP => [(0, -1), (0, 0), (-1, -1), (1, -1)],
+                Rotation::RIGHT => [(0, -1), (0, 0), (1, -1), (0, -2)],
+                Rotation::DOWN => [(0, -1), (1, -1), (-1, -1), (0, -2)],
+                Rotation::LEFT => [(0, -1), (-1, -1), (0, -0), (0, -2)],
             }
         }
         Tetromino::I => {
             match rotation {
-                Rotation::UP | Rotation::DOWN=> (Block::Pink, [(0, 0), (0, -1), (0, -2), (0, -3)]),
-                Rotation::RIGHT | Rotation::LEFT => (Block::Pink, [(-1, -1), (0, -1), (1, -1), (2, -1)]),
+                Rotation::UP | Rotation::DOWN=> [(0, 0), (0, -1), (0, -2), (0, -3)],
+                Rotation::RIGHT | Rotation::LEFT => [(-1, -1), (0, -1), (1, -1), (2, -1)],
             }
         }
-        Tetromino::O => (Block::Purple, [(0, 0), (0, -1), (1, 0), (1, -1)]),
+        Tetromino::O => [(0, 0), (0, -1), (1, 0), (1, -1)],
     }
 }
 
@@ -170,7 +182,8 @@ impl Screen for GameScreen {
 
     fn draw(&mut self, renderer: &mut AssetRenderer) {
         renderer.clear_sprites();
-        let (block, positions) = blocks(&self.tetromino, &self.rotation);
+        let block = block(&self.tetromino);
+        let positions = positions(&self.tetromino, &self.rotation);
         let (px, py) = self.position;
         for (bx, by) in positions {
             renderer.draw_sprite(sprite(&block), ((bx + px) * 8) + 120, (by + py) * 8 + 40, false)
