@@ -1,3 +1,6 @@
+use crate::game::block::Block;
+use crate::game::tetromino::{Rotation, Tetromino};
+use crate::game::{block, tetromino};
 use crate::screens::Screen;
 use derive::Event;
 use engine::assets::Assets;
@@ -12,147 +15,13 @@ struct NextPiecePlease();
 #[derive(Event)]
 struct CheckForLines();
 
-#[derive(Copy, Clone)]
-enum Block {
-    Purple,
-    Orange,
-    Green,
-    PaleBlue,
-    Gold,
-    DarkBlue,
-    Pink
-}
-
 #[derive(Event, Eq, PartialEq)]
 enum Action {
     Left,
     Right,
     Down,
     RotateClockwise,
-    RotateAnticlockwise
-}
-
-fn sprite(block: &Block) -> &'static str {
-    match block {
-        Block::Purple => "purple",
-        Block::Orange => "orange",
-        Block::Green => "green",
-        Block::PaleBlue => "pale_blue",
-        Block::Gold => "gold",
-        Block::DarkBlue => "dark_blue",
-        Block::Pink => "pink"
-    }
-}
-
-#[derive(Copy, Clone)]
-enum Tetromino {
-    L,
-    R,
-    T,
-    S,
-    Z,
-    O,
-    I
-}
-
-fn next_tetromino( ) -> Tetromino {
-    match rand::random_range(0..7) {
-        0 => Tetromino::L,
-        1 => Tetromino::R,
-        2 => Tetromino::T,
-        3 => Tetromino::S,
-        4 => Tetromino::Z,
-        5 => Tetromino::O,
-        6 => Tetromino::I,
-        __ => panic!("Out of range for tetromino")
-    }
-}
-
-#[derive(Copy, Clone)]
-enum Rotation {
-    UP,
-    RIGHT,
-    DOWN,
-    LEFT
-}
-
-fn block(tetronimo: &Tetromino) -> Block {
-    match tetronimo {
-        Tetromino::L => Block::Orange,
-        Tetromino::R => Block::DarkBlue,
-        Tetromino::T => Block::PaleBlue,
-        Tetromino::S => Block::Green,
-        Tetromino::Z => Block::Purple,
-        Tetromino::O => Block::Gold,
-        Tetromino::I => Block::Pink
-    }
-}
-
-fn clockwise(rotation: &Rotation) -> Rotation {
-    match rotation {
-        Rotation::UP => Rotation::RIGHT,
-        Rotation::RIGHT => Rotation::DOWN,
-        Rotation::DOWN => Rotation::LEFT,
-        Rotation::LEFT => Rotation::UP
-    }
-}
-
-fn anti_clockwise(rotation: &Rotation) -> Rotation {
-    match rotation {
-        Rotation::UP => Rotation::LEFT,
-        Rotation::RIGHT => Rotation::UP,
-        Rotation::DOWN => Rotation::RIGHT,
-        Rotation::LEFT => Rotation::DOWN
-    }
-}
-
-fn positions(tetromino: &Tetromino, rotation: &Rotation, (px, py): &(i32, i32)) -> [(i32, i32); 4] {
-    let positions = match tetromino {
-        Tetromino::L => {
-            match rotation {
-                Rotation::UP => [(0, 0), (0, -1), (0, -2), (1, -2)],
-                Rotation::RIGHT => [(0, -1), (1, -1), (2, -1), (0, -2)],
-                Rotation::DOWN => [(1, -1), (1, -2), (1, -3), (0, -1)],
-                Rotation::LEFT => [(-1, -2), (0, -2), (1, -2), (1, -1)],
-            }
-        }
-        Tetromino::R => {
-            match rotation {
-                Rotation::UP => [(1, 0), (1, -1), (1, -2), (0, -2)],
-                Rotation::RIGHT => [(0, -1), (0, -2), (1, -2), (2, -2)],
-                Rotation::DOWN => [(0, -1), (0, -2), (0, -3), (1, -1)],
-                Rotation::LEFT => [(-1, -1), (0, -1), (1, -1), (1, -2)],
-            }
-        }
-        Tetromino::S => {
-            match rotation {
-                Rotation::UP | Rotation::DOWN => [(0, 0), (0, -1), (1, -1), (1, -2)],
-                Rotation::RIGHT | Rotation::LEFT => [(1, -1), (2, -1), (1, -2), (0, -2)],
-            }
-        }
-        Tetromino::Z => {
-            match rotation {
-                Rotation::UP | Rotation::DOWN => [(1, 0), (1, -1), (0, -1), (0, -2)],
-                Rotation::RIGHT | Rotation::LEFT => [(-1, -1), (0, -1), (0, -2), (1, -2)],
-            }
-        }
-        Tetromino::T => {
-            match rotation {
-                Rotation::UP => [(0, -1), (0, 0), (-1, -1), (1, -1)],
-                Rotation::RIGHT => [(0, -1), (0, 0), (1, -1), (0, -2)],
-                Rotation::DOWN => [(0, -1), (1, -1), (-1, -1), (0, -2)],
-                Rotation::LEFT => [(0, -1), (-1, -1), (0, -0), (0, -2)],
-            }
-        }
-        Tetromino::I => {
-            match rotation {
-                Rotation::UP | Rotation::DOWN=> [(0, 0), (0, -1), (0, -2), (0, -3)],
-                Rotation::RIGHT | Rotation::LEFT => [(-1, -1), (0, -1), (1, -1), (2, -1)],
-            }
-        }
-        Tetromino::O => [(0, 0), (0, -1), (1, 0), (1, -1)],
-    };
-    positions.map(|(x, y)| (x + px, y + py))
+    RotateAnticlockwise,
 }
 
 pub struct GameScreen {
@@ -173,8 +42,8 @@ impl GameScreen {
 
         GameScreen {
             well: vec![vec![None; 10]; 20],
-            tetromino: next_tetromino(),
-            position: (4,19),
+            tetromino: tetromino::next_tetromino(),
+            position: (4, 19),
             rotation: Rotation::UP,
         }
     }
@@ -197,30 +66,31 @@ impl GameScreen {
         let mut tetromino = self.tetromino;
         match action {
             &Action::Left => x = x - 1,
-            &Action::Right => x  = x + 1,
+            &Action::Right => x = x + 1,
             &Action::Down => y = y - 1,
-            &Action::RotateClockwise => rotation = clockwise(&rotation),
-            &Action::RotateAnticlockwise => rotation = anti_clockwise(&rotation),
+            &Action::RotateClockwise => rotation = tetromino::clockwise(&rotation),
+            &Action::RotateAnticlockwise => rotation = tetromino::anti_clockwise(&rotation),
         }
-        let new_positions = positions(&tetromino, &rotation, &(x, y));
+        let new_positions = tetromino::positions(&tetromino, &rotation, &(x, y));
 
-        if new_positions.iter().all(|position| self.is_available(position)) {
+        if new_positions.iter().all(|position| self.is_available(position))
+        {
             self.position = (x, y);
             self.rotation = rotation;
             self.tetromino = tetromino;
+        } else if action == &Action::Down {
+            self.set_tetromino(events);
         }
-        else
-        {
-            if action == &Action::Down {
-                let old_positions = positions(&self.tetromino, &self.rotation, &self.position);
-                let block = block(&self.tetromino);
-                for (x, y) in old_positions {
-                    self.well[y as usize][x as usize] = Some(block);
-                }
-                events.fire(CheckForLines());
-                events.fire(NextPiecePlease());
-            }
+    }
+
+    fn set_tetromino(&mut self, events: &mut Events) {
+        let old_positions = tetromino::positions(&self.tetromino, &self.rotation, &self.position);
+        let block = tetromino::block(&self.tetromino);
+        for (x, y) in old_positions {
+            self.well[y as usize][x as usize] = Some(block);
         }
+        events.fire(CheckForLines());
+        events.fire(NextPiecePlease());
     }
 
     fn is_available(&self, &(x, y): &(i32, i32)) -> bool {
@@ -228,7 +98,8 @@ impl GameScreen {
     }
 
     fn check_for_lines(&mut self) {
-        self.well.retain(|row| row.iter().any(|item| item.is_none()));
+        self.well
+            .retain(|row| row.iter().any(|item| item.is_none()));
         while self.well.len() < 20 {
             self.well.push(vec![None; 10]);
         }
@@ -236,7 +107,7 @@ impl GameScreen {
 }
 
 fn draw_block(renderer: &mut AssetRenderer, block: &Block, x: i32, y: i32) {
-    renderer.draw_sprite(sprite(&block), x * 8 + 120, y * 8 + 40, false)
+    renderer.draw_sprite(block::sprite(&block), x * 8 + 120, y * 8 + 40, false)
 }
 
 impl Screen for GameScreen {
@@ -248,15 +119,15 @@ impl Screen for GameScreen {
         event.apply(|NextPiecePlease()| {
             self.position = (4, 19);
             self.rotation = Rotation::UP;
-            self.tetromino = next_tetromino();
+            self.tetromino = tetromino::next_tetromino();
         });
         event.apply(|CheckForLines()| self.check_for_lines());
     }
 
     fn draw(&mut self, renderer: &mut AssetRenderer) {
         renderer.clear_sprites();
-        let block = block(&self.tetromino);
-        let positions = positions(&self.tetromino, &self.rotation, &self.position);
+        let block = tetromino::block(&self.tetromino);
+        let positions = tetromino::positions(&self.tetromino, &self.rotation, &self.position);
         for (x, y) in positions {
             draw_block(renderer, &block, x, y);
         }

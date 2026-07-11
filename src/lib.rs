@@ -1,5 +1,6 @@
 pub mod application;
 pub mod screens;
+pub mod game;
 
 use engine::events::event::Events;
 use engine::retroarch::RetroarchCore;
