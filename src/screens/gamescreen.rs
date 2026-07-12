@@ -10,6 +10,7 @@ use engine::events::input::ButtonPressed;
 use engine::events::timer::TimerId;
 use engine::renderer::asset_renderer::AssetRenderer;
 use rust_libretro::types::JoypadState;
+use crate::input::{KeyRepeater, KeysRepeater};
 
 #[derive(Event)]
 struct NextPiecePlease();
@@ -31,7 +32,8 @@ pub struct GameScreen {
     tetromino: Tetromino,
     position: (i32, i32),
     rotation: Rotation,
-    next_down_timer: TimerId
+    next_down_timer: TimerId,
+    key_repeater: KeysRepeater
 }
 
 impl GameScreen {
@@ -50,7 +52,12 @@ impl GameScreen {
             tetromino: tetromino::next_tetromino(),
             position: (4, 19),
             rotation: Rotation::UP,
-            next_down_timer
+            next_down_timer,
+            key_repeater: KeysRepeater::new(vec![
+                KeyRepeater::new(JoypadState::LEFT, Duration::from_secs_f64(0.2), Duration::from_secs_f64(0.06)),
+                KeyRepeater::new(JoypadState::RIGHT, Duration::from_secs_f64(0.2), Duration::from_secs_f64(0.06)),
+                KeyRepeater::new(JoypadState::DOWN, Duration::from_secs_f64(0.06), Duration::from_secs_f64(0.06)),
+            ])
         }
     }
 
@@ -138,11 +145,11 @@ fn draw_block(renderer: &mut AssetRenderer, block: &Block, x: i32, y: i32) {
 
 impl Screen for GameScreen {
     fn on_event(&mut self, event: &Event, events: &mut Events) {
+        self.key_repeater.on_event(event, events);
+
         event.apply(|dt| events.elapse("Game", *dt));
 
-        event.apply(|ButtonPressed(button)| {
-            self.listen_to_press(button, events);
-        });
+        event.apply(|ButtonPressed(button)| self.listen_to_press(button, events));
         event.apply(|action| self.attempt_move(action, events));
         event.apply(|NextPiecePlease()| {
             self.position = (4, 19);
