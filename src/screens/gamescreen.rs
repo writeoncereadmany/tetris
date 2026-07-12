@@ -9,6 +9,7 @@ use engine::events::event::{Event, Events};
 use engine::events::input::ButtonPressed;
 use engine::events::timer::TimerId;
 use engine::renderer::asset_renderer::AssetRenderer;
+use engine::renderer::spritefont::{Alignment, HorizontalAlignment, VerticalAlignment};
 use rust_libretro::types::JoypadState;
 use crate::input::{KeyRepeater, KeysRepeater};
 use crate::screens::transitions::GameOver;
@@ -34,7 +35,10 @@ pub struct GameScreen {
     position: (i32, i32),
     rotation: Rotation,
     next_down_timer: TimerId,
-    key_repeater: KeysRepeater
+    key_repeater: KeysRepeater,
+    score: u32,
+    lines: u32,
+    level: u32
 }
 
 impl GameScreen {
@@ -46,7 +50,7 @@ impl GameScreen {
         }
         renderer.clear_sprites();
 
-        let next_down_timer = events.schedule("Game", Duration::from_millis(1_000), Action::Down);
+        let next_down_timer = events.schedule("Game", Self::drop_time(1), Action::Down);
 
         GameScreen {
             well: vec![vec![None; 10]; 20],
@@ -58,8 +62,29 @@ impl GameScreen {
                 KeyRepeater::new(JoypadState::LEFT, Duration::from_secs_f64(0.2), Duration::from_secs_f64(0.06)),
                 KeyRepeater::new(JoypadState::RIGHT, Duration::from_secs_f64(0.2), Duration::from_secs_f64(0.06)),
                 KeyRepeater::new(JoypadState::DOWN, Duration::from_secs_f64(0.06), Duration::from_secs_f64(0.06)),
-            ])
+            ]),
+            score: 0,
+            lines: 0,
+            level: 0
         }
+    }
+
+    fn drop_time(level: u32) -> Duration {
+        match level {
+            1 => Duration::from_millis(1_000),
+            2 => Duration::from_millis(750),
+            3 => Duration::from_millis(500),
+            4 => Duration::from_millis(400),
+            5 => Duration::from_millis(325),
+            6 => Duration::from_millis(250),
+            7 => Duration::from_millis(200),
+            8 => Duration::from_millis(150),
+            9 => Duration::from_millis(125),
+            10 => Duration::from_millis(100),
+            11 => Duration::from_millis(80),
+            _ => Duration::from_millis(60),
+        }
+
     }
 
     fn listen_to_press(&mut self, button: &JoypadState, events: &mut Events) {
@@ -95,7 +120,7 @@ impl GameScreen {
 
         if action == &Action::Down {
             events.cancel("Game", &self.next_down_timer);
-            self.next_down_timer = events.schedule("Game", Duration::from_millis(1_000), Action::Down);
+            self.next_down_timer = events.schedule("Game", Self::drop_time(self.level), Action::Down);
         }
     }
 
@@ -114,8 +139,25 @@ impl GameScreen {
     }
 
     fn check_for_lines(&mut self) {
-        self.well
-            .retain(|row| row.iter().any(|item| item.is_none()));
+        let mut lines_to_remove = Vec::<usize>::new();
+        for (index, row) in self.well.iter().enumerate() {
+            if row.iter().all(|block| block.is_some()) {
+                lines_to_remove.push(index);
+            }
+        }
+        self.lines += lines_to_remove.len() as u32;
+        self.score += match lines_to_remove.len() {
+            1 => 40,
+            2 => 100,
+            3 => 300,
+            4 => 1200,
+            _ => 0
+        };
+        self.level = self.lines / 10 + 1;
+        lines_to_remove.reverse();
+        for index in lines_to_remove {
+            self.well.remove(index);
+        }
         while self.well.len() < 20 {
             self.well.push(vec![None; 10]);
         }
@@ -137,6 +179,30 @@ impl GameScreen {
                 }
             }
         }
+    }
+
+    fn draw_stats(&mut self, renderer: &mut AssetRenderer) {
+        renderer.draw_text(
+            &format!("{}", self.score),
+            "Spritefont_Medium",
+            280,
+            160,
+            Alignment::aligned(HorizontalAlignment::RIGHT, VerticalAlignment::BOTTOM)
+        );
+        renderer.draw_text(
+            &format!("{}", self.lines),
+            "Spritefont_Medium",
+            280,
+            120,
+            Alignment::aligned(HorizontalAlignment::RIGHT, VerticalAlignment::BOTTOM)
+        );
+        renderer.draw_text(
+            &format!("{}", self.level),
+            "Spritefont_Medium",
+            280,
+            80,
+            Alignment::aligned(HorizontalAlignment::RIGHT, VerticalAlignment::BOTTOM)
+        );
     }
 
     fn next_tetromino_please(&mut self, events: &mut Events) {
@@ -174,5 +240,6 @@ impl Screen for GameScreen {
         renderer.clear_sprites();
         self.draw_current_tetromino(renderer);
         self.draw_well(renderer);
+        self.draw_stats(renderer);
     }
 }
