@@ -11,6 +11,7 @@ use engine::events::timer::TimerId;
 use engine::renderer::asset_renderer::AssetRenderer;
 use rust_libretro::types::JoypadState;
 use crate::input::{KeyRepeater, KeysRepeater};
+use crate::screens::transitions::GameOver;
 
 #[derive(Event)]
 struct NextPiecePlease();
@@ -137,6 +138,20 @@ impl GameScreen {
             }
         }
     }
+
+    fn next_tetromino_please(&mut self, events: &mut Events) {
+        let new_position = (4, 19);
+        let new_rotation = Rotation::UP;
+        let new_tetromino = tetromino::next_tetromino();
+        let next_start_positions = tetromino::positions(&new_tetromino, &new_rotation, &new_position);
+        if next_start_positions.iter().all(|position| self.is_available(position)) {
+            self.position = (4, 19);
+            self.rotation = Rotation::UP;
+            self.tetromino = tetromino::next_tetromino();
+        } else {
+            events.fire(GameOver());
+        }
+    }
 }
 
 fn draw_block(renderer: &mut AssetRenderer, block: &Block, x: i32, y: i32) {
@@ -151,11 +166,7 @@ impl Screen for GameScreen {
 
         event.apply(|ButtonPressed(button)| self.listen_to_press(button, events));
         event.apply(|action| self.attempt_move(action, events));
-        event.apply(|NextPiecePlease()| {
-            self.position = (4, 19);
-            self.rotation = Rotation::UP;
-            self.tetromino = tetromino::next_tetromino();
-        });
+        event.apply(|NextPiecePlease()| self.next_tetromino_please(events));
         event.apply(|CheckForLines()| self.check_for_lines());
     }
 

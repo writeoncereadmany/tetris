@@ -6,3 +6,5 @@ pub struct StartGame();
 #[derive(Event)]
 pub struct Loaded();
 
+#[derive(Event)]
+pub struct GameOver();

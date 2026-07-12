@@ -13,7 +13,7 @@ use crate::screens::gamescreen::GameScreen;
 use crate::screens::loadscreen::LoadScreen;
 use crate::screens::Screen;
 use crate::screens::titlescreen::TitleScreen;
-use crate::screens::transitions::{Loaded, StartGame};
+use crate::screens::transitions::{GameOver, Loaded, StartGame};
 
 pub struct Tetris {
     assets: Arc<Assets>,
@@ -81,6 +81,9 @@ impl Tetris {
         });
         event.apply(|StartGame()| {
             self.screen = Box::new(GameScreen::new(renderer, &self.assets, events));
+        });
+        event.apply(|GameOver()| {
+            self.screen = Box::new(TitleScreen::new(renderer));
         });
     }
 
