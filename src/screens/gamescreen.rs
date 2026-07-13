@@ -103,6 +103,9 @@ impl GameScreen {
     }
 
     fn listen_to_press(&mut self, button: &JoypadState, events: &mut Events) {
+        if !self.lines_being_removed.is_empty() {
+            return;
+        }
         match button {
             &JoypadState::LEFT => events.fire(Action::Left),
             &JoypadState::RIGHT => events.fire(Action::Right),
