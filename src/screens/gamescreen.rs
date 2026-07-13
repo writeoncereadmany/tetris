@@ -179,15 +179,10 @@ impl GameScreen {
                 lines_to_remove.push(index);
             }
         }
-        if lines_to_remove.len() > 0 {
-            events.fire(RemoveLines(lines_to_remove));
-        }
-        else {
-            events.fire(NextPiecePlease());
-        }
+        events.fire(RemoveLines(lines_to_remove));
     }
 
-    fn remove_lines(&mut self, events: &mut Events) {
+    fn clear_lines(&mut self, events: &mut Events) {
         self.lines += self.lines_being_removed.len() as u32;
         self.score += match self.lines_being_removed.len() {
             0 => 0,
@@ -293,9 +288,17 @@ impl GameScreen {
         );
     }
 
-    fn animate_line_removal(&mut self, lines: Vec<usize>, events: &mut Events) {
+    fn remove_lines(&mut self, lines: Vec<usize>, events: &mut Events) {
         self.lines_being_removed = lines;
-        events.schedule("Game", Duration::from_millis(1000), ClearLines());
+        let duration = match self.lines_being_removed.len() {
+            0 => Duration::from_millis(0),
+            1 => Duration::from_millis(500),
+            2 => Duration::from_millis(800),
+            3 => Duration::from_millis(1000),
+            4 => Duration::from_millis(1500),
+            _ => panic!("Too many lines! Too many lines!")
+        };
+        events.schedule("Game", duration, ClearLines());
     }
 
     fn next_tetromino_please(&mut self, events: &mut Events) {
@@ -328,8 +331,8 @@ impl Screen for GameScreen {
         event.apply(|action| self.attempt_move(action, events));
         event.apply(|NextPiecePlease()| self.next_tetromino_please(events));
         event.apply(|CheckForLines()| self.check_for_lines(events));
-        event.apply(|RemoveLines(lines)| self.animate_line_removal(lines.clone(), events));
-        event.apply(|ClearLines()| self.remove_lines(events));
+        event.apply(|RemoveLines(lines)| self.remove_lines(lines.clone(), events));
+        event.apply(|ClearLines()| self.clear_lines(events));
     }
 
     fn draw(&mut self, renderer: &mut AssetRenderer) {
