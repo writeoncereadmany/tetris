@@ -44,6 +44,7 @@ pub struct GameScreen {
     next_tetromino: Tetromino,
     held_tetromino: Option<Tetromino>,
     lines_being_removed: Vec<usize>,
+    game_over: bool,
     position: (i32, i32),
     rotation: Rotation,
     next_down_timer: TimerId,
@@ -70,6 +71,7 @@ impl GameScreen {
             next_tetromino: tetromino::next_tetromino(),
             held_tetromino: None,
             lines_being_removed: Vec::new(),
+            game_over: false,
             position: (4, 19),
             rotation: Rotation::UP,
             next_down_timer,
@@ -148,14 +150,14 @@ impl GameScreen {
             else {
                 self.position = (x, y);
                 self.rotation = rotation;
+
+                if action == &Action::Down {
+                    events.cancel("Game", &self.next_down_timer);
+                    self.next_down_timer = events.schedule("Game", Self::drop_time(self.level), Action::Down);
+                }
             }
         } else if action == &Action::Down {
             self.set_tetromino(events);
-        }
-
-        if action == &Action::Down {
-            events.cancel("Game", &self.next_down_timer);
-            self.next_down_timer = events.schedule("Game", Self::drop_time(self.level), Action::Down);
         }
     }
 
@@ -289,6 +291,19 @@ impl GameScreen {
         );
     }
 
+    fn draw_game_over(&mut self, renderer: &mut AssetRenderer) {
+        if self.game_over
+        {
+            renderer.draw_text(
+                "Game Over",
+                "Spritefont_Medium",
+                160,
+                100,
+                Alignment::aligned(HorizontalAlignment::CENTER, VerticalAlignment::MIDDLE)
+            );
+        }
+    }
+
     fn remove_lines(&mut self, lines: Vec<usize>, events: &mut Events) {
         self.lines_being_removed = lines;
         let duration = match self.lines_being_removed.len() {
@@ -312,8 +327,10 @@ impl GameScreen {
             self.rotation = Rotation::UP;
             self.tetromino = new_tetromino;
             self.next_tetromino = tetromino::next_tetromino();
+            self.next_down_timer = events.schedule("Game", Self::drop_time(self.level), Action::Down);
         } else {
-            events.fire(GameOver());
+            self.game_over = true;
+            events.schedule("Game", Duration::from_secs_f64(2.0), GameOver());
         }
     }
 }
@@ -344,5 +361,6 @@ impl Screen for GameScreen {
         self.draw_well(renderer);
         self.draw_line_removal(renderer);
         self.draw_stats(renderer);
+        self.draw_game_over(renderer)
     }
 }
