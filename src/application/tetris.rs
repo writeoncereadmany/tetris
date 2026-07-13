@@ -66,7 +66,7 @@ impl Application for Tetris {
     fn properties() -> ApplicationProperties {
         ApplicationProperties {
             width: 320,
-            height: 240,
+            height: 200,
             name: "Tetris".to_string(),
             extensions: &["ttr"],
             input_descriptors: INPUT_DESCRIPTORS,

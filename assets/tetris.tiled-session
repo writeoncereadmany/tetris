@@ -49,6 +49,7 @@
         "graphics/graphics.tsx",
         "maps/gameboard.tmx"
     ],
+    "resizeMap.removeObjects": false,
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {
         "height": 8,

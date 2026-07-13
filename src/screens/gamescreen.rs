@@ -32,6 +32,7 @@ enum Action {
 pub struct GameScreen {
     well: Vec<Vec<Option<Block>>>, // outer vec is Y coord, inner is X, to simplify line removal
     tetromino: Tetromino,
+    next_tetromino: Tetromino,
     position: (i32, i32),
     rotation: Rotation,
     next_down_timer: TimerId,
@@ -55,6 +56,7 @@ impl GameScreen {
         GameScreen {
             well: vec![vec![None; 10]; 20],
             tetromino: tetromino::next_tetromino(),
+            next_tetromino: tetromino::next_tetromino(),
             position: (4, 19),
             rotation: Rotation::UP,
             next_down_timer,
@@ -65,7 +67,7 @@ impl GameScreen {
             ]),
             score: 0,
             lines: 0,
-            level: 0
+            level: 1
         }
     }
 
@@ -171,6 +173,23 @@ impl GameScreen {
         }
     }
 
+    fn draw_next_tetromino(&mut self, renderer: &mut AssetRenderer) {
+        let block = tetromino::block(&self.next_tetromino);
+        let positions = tetromino::positions(&self.next_tetromino, &Rotation::UP, &(0, 0));
+        let (mut min_x, mut min_y, mut max_x, mut max_y) = (i32::MAX, i32::MAX, i32::MIN, i32::MIN);
+        for (x, y) in positions {
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let center_x = (max_x + min_x) * 4;
+        let center_y = (max_y + min_y) * 4;
+        for (x, y) in positions {
+            renderer.draw_sprite(block::sprite(&block), x * 8 + 80 - center_x, y * 8 + 128 - center_y, false)
+        }
+    }
+
     fn draw_well(&mut self, renderer: &mut AssetRenderer) {
         for (y, row) in self.well.iter().enumerate() {
             for (x, block) in row.iter().enumerate() {
@@ -186,21 +205,21 @@ impl GameScreen {
             &format!("{}", self.score),
             "Spritefont_Medium",
             280,
-            160,
+            144,
             Alignment::aligned(HorizontalAlignment::RIGHT, VerticalAlignment::BOTTOM)
         );
         renderer.draw_text(
             &format!("{}", self.lines),
             "Spritefont_Medium",
             280,
-            120,
+            104,
             Alignment::aligned(HorizontalAlignment::RIGHT, VerticalAlignment::BOTTOM)
         );
         renderer.draw_text(
             &format!("{}", self.level),
             "Spritefont_Medium",
             280,
-            80,
+            64,
             Alignment::aligned(HorizontalAlignment::RIGHT, VerticalAlignment::BOTTOM)
         );
     }
@@ -208,12 +227,13 @@ impl GameScreen {
     fn next_tetromino_please(&mut self, events: &mut Events) {
         let new_position = (4, 19);
         let new_rotation = Rotation::UP;
-        let new_tetromino = tetromino::next_tetromino();
+        let new_tetromino = self.next_tetromino;
         let next_start_positions = tetromino::positions(&new_tetromino, &new_rotation, &new_position);
         if next_start_positions.iter().all(|position| self.is_available(position)) {
             self.position = (4, 19);
             self.rotation = Rotation::UP;
-            self.tetromino = tetromino::next_tetromino();
+            self.tetromino = new_tetromino;
+            self.next_tetromino = tetromino::next_tetromino();
         } else {
             events.fire(GameOver());
         }
@@ -221,7 +241,7 @@ impl GameScreen {
 }
 
 fn draw_block(renderer: &mut AssetRenderer, block: &Block, x: i32, y: i32) {
-    renderer.draw_sprite(block::sprite(&block), x * 8 + 120, y * 8 + 40, false)
+    renderer.draw_sprite(block::sprite(&block), x * 8 + 120, y * 8 + 24, false)
 }
 
 impl Screen for GameScreen {
@@ -239,6 +259,7 @@ impl Screen for GameScreen {
     fn draw(&mut self, renderer: &mut AssetRenderer) {
         renderer.clear_sprites();
         self.draw_current_tetromino(renderer);
+        self.draw_next_tetromino(renderer);
         self.draw_well(renderer);
         self.draw_stats(renderer);
     }
