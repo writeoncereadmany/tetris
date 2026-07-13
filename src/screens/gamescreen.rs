@@ -1,7 +1,8 @@
-use std::time::Duration;
 use crate::game::block::Block;
 use crate::game::tetromino::{Rotation, Tetromino};
 use crate::game::{block, tetromino};
+use crate::input::{KeyRepeater, KeysRepeater};
+use crate::screens::transitions::GameOver;
 use crate::screens::Screen;
 use derive::Event;
 use engine::assets::Assets;
@@ -11,8 +12,7 @@ use engine::events::timer::TimerId;
 use engine::renderer::asset_renderer::AssetRenderer;
 use engine::renderer::spritefont::{Alignment, HorizontalAlignment, VerticalAlignment};
 use rust_libretro::types::JoypadState;
-use crate::input::{KeyRepeater, KeysRepeater};
-use crate::screens::transitions::GameOver;
+use std::time::Duration;
 
 #[derive(Event)]
 struct NextPiecePlease();
@@ -27,12 +27,14 @@ enum Action {
     Down,
     RotateClockwise,
     RotateAnticlockwise,
+    HoldTetromino,
 }
 
 pub struct GameScreen {
     well: Vec<Vec<Option<Block>>>, // outer vec is Y coord, inner is X, to simplify line removal
     tetromino: Tetromino,
     next_tetromino: Tetromino,
+    held_tetromino: Option<Tetromino>,
     position: (i32, i32),
     rotation: Rotation,
     next_down_timer: TimerId,
@@ -57,6 +59,7 @@ impl GameScreen {
             well: vec![vec![None; 10]; 20],
             tetromino: tetromino::next_tetromino(),
             next_tetromino: tetromino::next_tetromino(),
+            held_tetromino: None,
             position: (4, 19),
             rotation: Rotation::UP,
             next_down_timer,
@@ -96,6 +99,7 @@ impl GameScreen {
             &JoypadState::DOWN => events.fire(Action::Down),
             &JoypadState::A => events.fire(Action::RotateClockwise),
             &JoypadState::B => events.fire(Action::RotateAnticlockwise),
+            &JoypadState::Y => events.fire(Action::HoldTetromino),
             _ => {}
         }
     }
@@ -103,19 +107,34 @@ impl GameScreen {
     fn attempt_move(&mut self, action: &Action, events: &mut Events) {
         let (mut x, mut y) = self.position;
         let mut rotation = self.rotation;
+        let mut tetromino = self.tetromino;
         match action {
             &Action::Left => x = x - 1,
             &Action::Right => x = x + 1,
             &Action::Down => y = y - 1,
             &Action::RotateClockwise => rotation = tetromino::clockwise(&rotation),
             &Action::RotateAnticlockwise => rotation = tetromino::anti_clockwise(&rotation),
+            &Action::HoldTetromino => tetromino = self.held_tetromino.unwrap_or(self.next_tetromino),
         }
-        let new_positions = tetromino::positions(&self.tetromino, &rotation, &(x, y));
+        let new_positions = tetromino::positions(&tetromino, &rotation, &(x, y));
 
         if new_positions.iter().all(|position| self.is_available(position))
         {
-            self.position = (x, y);
-            self.rotation = rotation;
+            if action == &Action::HoldTetromino {
+                let current = self.tetromino;
+                if let Some(held) = self.held_tetromino {
+                    self.tetromino = held;
+                    self.held_tetromino = Some(current);
+                } else {
+                    self.tetromino = self.next_tetromino;
+                    self.next_tetromino = tetromino::next_tetromino();
+                    self.held_tetromino = Some(current);
+                }
+            }
+            else {
+                self.position = (x, y);
+                self.rotation = rotation;
+            }
         } else if action == &Action::Down {
             self.set_tetromino(events);
         }
@@ -149,12 +168,13 @@ impl GameScreen {
         }
         self.lines += lines_to_remove.len() as u32;
         self.score += match lines_to_remove.len() {
+            0 => 0,
             1 => 40,
             2 => 100,
             3 => 300,
             4 => 1200,
-            _ => 0
-        };
+            _ => panic!("Too many lines! Too many lines!") // rip sheamus
+        } * (self.level + 1);
         self.level = self.lines / 10 + 1;
         lines_to_remove.reverse();
         for index in lines_to_remove {
@@ -174,8 +194,19 @@ impl GameScreen {
     }
 
     fn draw_next_tetromino(&mut self, renderer: &mut AssetRenderer) {
-        let block = tetromino::block(&self.next_tetromino);
-        let positions = tetromino::positions(&self.next_tetromino, &Rotation::UP, &(0, 0));
+        let tetromino = self.next_tetromino;
+        self.draw_preview_tetromino(tetromino, 80, 128, renderer);
+    }
+
+    fn draw_held_tetromino(&mut self, renderer: &mut AssetRenderer) {
+        if let Some(tetromino) = self.held_tetromino {
+            self.draw_preview_tetromino(tetromino, 80, 64, renderer);
+        }
+    }
+
+    fn draw_preview_tetromino(&mut self, tetromino: Tetromino, sx:i32, sy: i32, renderer: &mut AssetRenderer) {
+        let block = tetromino::block(&tetromino);
+        let positions = tetromino::positions(&tetromino, &Rotation::UP, &(0, 0));
         let (mut min_x, mut min_y, mut max_x, mut max_y) = (i32::MAX, i32::MAX, i32::MIN, i32::MIN);
         for (x, y) in positions {
             min_x = min_x.min(x);
@@ -186,7 +217,7 @@ impl GameScreen {
         let center_x = (max_x + min_x) * 4;
         let center_y = (max_y + min_y) * 4;
         for (x, y) in positions {
-            renderer.draw_sprite(block::sprite(&block), x * 8 + 80 - center_x, y * 8 + 128 - center_y, false)
+            renderer.draw_sprite(block::sprite(&block), x * 8 + sx - center_x, y * 8 + sy - center_y, false)
         }
     }
 
@@ -260,6 +291,7 @@ impl Screen for GameScreen {
         renderer.clear_sprites();
         self.draw_current_tetromino(renderer);
         self.draw_next_tetromino(renderer);
+        self.draw_held_tetromino(renderer);
         self.draw_well(renderer);
         self.draw_stats(renderer);
     }
