@@ -68,10 +68,10 @@ pub fn positions(tetromino: &Tetromino, rotation: &Rotation, (px, py): &(i32, i3
         }
         Tetromino::T => {
             match rotation {
-                Rotation::UP => [(0, -1), (0, 0), (-1, -1), (1, -1)],
-                Rotation::RIGHT => [(0, -1), (0, 0), (1, -1), (0, -2)],
-                Rotation::DOWN => [(0, -1), (1, -1), (-1, -1), (0, -2)],
-                Rotation::LEFT => [(0, -1), (-1, -1), (0, -0), (0, -2)],
+                Rotation::UP => [(0, -1), (0, 0), (1, -1), (0, -2)],
+                Rotation::RIGHT => [(0, -1), (1, -1), (-1, -1), (0, -2)],
+                Rotation::DOWN => [(0, -1), (-1, -1), (0, -0), (0, -2)],
+                Rotation::LEFT => [(0, -1), (0, 0), (-1, -1), (1, -1)],
             }
         }
         Tetromino::I => {
