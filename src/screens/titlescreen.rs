@@ -13,7 +13,7 @@ pub struct TitleScreen;
 impl TitleScreen {
     pub fn new(renderer: &mut AssetRenderer) -> Self {
         renderer.clear();
-        renderer.draw_background_text("Tetris", "Spritefont_Medium", 160, 120, Alignment::aligned(CENTER, MIDDLE));
+        renderer.draw_background_text("Tetris", "Spritefont_Medium", 160, 100, Alignment::aligned(CENTER, MIDDLE));
         renderer.clear_sprites();
         TitleScreen
     }
