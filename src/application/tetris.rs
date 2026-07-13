@@ -77,13 +77,13 @@ impl Application for Tetris {
 impl Tetris {
     fn on_event(&mut self, event: &Event, renderer: &mut AssetRenderer, events: &mut Events) {
         event.apply(|Loaded()| {
-            self.screen = Box::new(TitleScreen::new(renderer));
+            self.screen = Box::new(TitleScreen::new(&self.assets, renderer));
         });
         event.apply(|StartGame()| {
             self.screen = Box::new(GameScreen::new(renderer, &self.assets, events));
         });
         event.apply(|GameOver()| {
-            self.screen = Box::new(TitleScreen::new(renderer));
+            self.screen = Box::new(TitleScreen::new(&self.assets, renderer));
         });
     }
 

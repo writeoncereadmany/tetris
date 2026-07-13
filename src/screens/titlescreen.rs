@@ -1,3 +1,4 @@
+use engine::assets::Assets;
 use crate::screens::transitions::StartGame;
 use crate::screens::Screen;
 use engine::events::event::{Event, Events};
@@ -11,9 +12,14 @@ use VerticalAlignment::MIDDLE;
 pub struct TitleScreen;
 
 impl TitleScreen {
-    pub fn new(renderer: &mut AssetRenderer) -> Self {
+    pub fn new(assets: &Assets, renderer: &mut AssetRenderer) -> Self {
+
+        let titlescreen = assets.maps.get("titlescreen").unwrap();
         renderer.clear();
-        renderer.draw_background_text("Tetris", "Spritefont_Medium", 160, 100, Alignment::aligned(CENTER, MIDDLE));
+        for tile in &titlescreen.tiles {
+            renderer.draw_background_tile(&tile.tile_set_name, tile.id, tile.x * 8, tile.y * 8)
+        }
+        renderer.draw_background_text("Press Start", "Spritefont_Medium", 160, 32, Alignment::aligned(CENTER, MIDDLE));
         renderer.clear_sprites();
         TitleScreen
     }
