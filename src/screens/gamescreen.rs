@@ -56,6 +56,8 @@ pub struct GameScreen {
 
 impl GameScreen {
     pub fn new(renderer: &mut AssetRenderer, assets: &Assets, events: &mut Events) -> GameScreen {
+        // ensure we don't have any events queued from a previous game
+        events.clear_schedule("Game");
         let gameboard = assets.maps.get("gameboard").unwrap();
         renderer.clear();
         for tile in &gameboard.tiles {
