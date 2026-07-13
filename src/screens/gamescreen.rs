@@ -12,13 +12,19 @@ use engine::events::timer::TimerId;
 use engine::renderer::asset_renderer::AssetRenderer;
 use engine::renderer::spritefont::{Alignment, HorizontalAlignment, VerticalAlignment};
 use rust_libretro::types::JoypadState;
-use std::time::Duration;
+use std::time::{Duration, Instant, SystemTime};
 
 #[derive(Event)]
 struct NextPiecePlease();
 
 #[derive(Event)]
 struct CheckForLines();
+
+#[derive(Event)]
+struct RemoveLines(Vec<usize>);
+
+#[derive(Event)]
+struct ClearLines();
 
 #[derive(Event, Eq, PartialEq)]
 enum Action {
@@ -30,11 +36,14 @@ enum Action {
     HoldTetromino,
 }
 
+const PULSE_FRAMES: [&'static str; 6] = ["pulse_1", "pulse_2", "pulse_3", "pulse_4", "pulse_3", "pulse_2"];
+
 pub struct GameScreen {
     well: Vec<Vec<Option<Block>>>, // outer vec is Y coord, inner is X, to simplify line removal
     tetromino: Tetromino,
     next_tetromino: Tetromino,
     held_tetromino: Option<Tetromino>,
+    lines_being_removed: Vec<usize>,
     position: (i32, i32),
     rotation: Rotation,
     next_down_timer: TimerId,
@@ -60,6 +69,7 @@ impl GameScreen {
             tetromino: tetromino::next_tetromino(),
             next_tetromino: tetromino::next_tetromino(),
             held_tetromino: None,
+            lines_being_removed: Vec::new(),
             position: (4, 19),
             rotation: Rotation::UP,
             next_down_timer,
@@ -146,28 +156,37 @@ impl GameScreen {
     }
 
     fn set_tetromino(&mut self, events: &mut Events) {
+        events.cancel("Game", &self.next_down_timer);
         let old_positions = tetromino::positions(&self.tetromino, &self.rotation, &self.position);
         let block = tetromino::block(&self.tetromino);
         for (x, y) in old_positions {
             self.well[y as usize][x as usize] = Some(block);
         }
         events.fire(CheckForLines());
-        events.fire(NextPiecePlease());
     }
 
     fn is_available(&self, &(x, y): &(i32, i32)) -> bool {
         x >= 0 && x < 10 && y >= 0 && self.well[y as usize][x as usize].is_none()
     }
 
-    fn check_for_lines(&mut self) {
+    fn check_for_lines(&mut self, events: &mut Events) {
         let mut lines_to_remove = Vec::<usize>::new();
         for (index, row) in self.well.iter().enumerate() {
             if row.iter().all(|block| block.is_some()) {
                 lines_to_remove.push(index);
             }
         }
-        self.lines += lines_to_remove.len() as u32;
-        self.score += match lines_to_remove.len() {
+        if lines_to_remove.len() > 0 {
+            events.fire(RemoveLines(lines_to_remove));
+        }
+        else {
+            events.fire(NextPiecePlease());
+        }
+    }
+
+    fn remove_lines(&mut self, events: &mut Events) {
+        self.lines += self.lines_being_removed.len() as u32;
+        self.score += match self.lines_being_removed.len() {
             0 => 0,
             1 => 40,
             2 => 100,
@@ -176,16 +195,22 @@ impl GameScreen {
             _ => panic!("Too many lines! Too many lines!") // rip sheamus
         } * (self.level + 1);
         self.level = self.lines / 10 + 1;
-        lines_to_remove.reverse();
-        for index in lines_to_remove {
-            self.well.remove(index);
+        self.lines_being_removed.reverse();
+        for index in self.lines_being_removed.iter() {
+            self.well.remove(*index);
         }
         while self.well.len() < 20 {
             self.well.push(vec![None; 10]);
         }
+        self.lines_being_removed.clear();
+
+        events.fire(NextPiecePlease());
     }
 
     fn draw_current_tetromino(&mut self, renderer: &mut AssetRenderer) {
+        if !self.lines_being_removed.is_empty() {
+            return;
+        }
         let block = tetromino::block(&self.tetromino);
         let positions = tetromino::positions(&self.tetromino, &self.rotation, &self.position);
         for (x, y) in positions {
@@ -231,6 +256,16 @@ impl GameScreen {
         }
     }
 
+    fn draw_line_removal(&mut self, renderer: &mut AssetRenderer) {
+        let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis();
+        let pulse_frame = PULSE_FRAMES[(now / 75 % 6) as usize];
+        for row in self.lines_being_removed.iter() {
+            for x in 0..10 {
+                renderer.draw_sprite(pulse_frame, x * 8 + 120, *row as i32 * 8 + 24, false)
+            }
+        }
+    }
+
     fn draw_stats(&mut self, renderer: &mut AssetRenderer) {
         renderer.draw_text(
             &format!("{}", self.score),
@@ -253,6 +288,11 @@ impl GameScreen {
             64,
             Alignment::aligned(HorizontalAlignment::RIGHT, VerticalAlignment::BOTTOM)
         );
+    }
+
+    fn animate_line_removal(&mut self, lines: Vec<usize>, events: &mut Events) {
+        self.lines_being_removed = lines;
+        events.schedule("Game", Duration::from_millis(1000), ClearLines());
     }
 
     fn next_tetromino_please(&mut self, events: &mut Events) {
@@ -284,7 +324,9 @@ impl Screen for GameScreen {
         event.apply(|ButtonPressed(button)| self.listen_to_press(button, events));
         event.apply(|action| self.attempt_move(action, events));
         event.apply(|NextPiecePlease()| self.next_tetromino_please(events));
-        event.apply(|CheckForLines()| self.check_for_lines());
+        event.apply(|CheckForLines()| self.check_for_lines(events));
+        event.apply(|RemoveLines(lines)| self.animate_line_removal(lines.clone(), events));
+        event.apply(|ClearLines()| self.remove_lines(events));
     }
 
     fn draw(&mut self, renderer: &mut AssetRenderer) {
@@ -293,6 +335,7 @@ impl Screen for GameScreen {
         self.draw_next_tetromino(renderer);
         self.draw_held_tetromino(renderer);
         self.draw_well(renderer);
+        self.draw_line_removal(renderer);
         self.draw_stats(renderer);
     }
 }
