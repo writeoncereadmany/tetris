@@ -9,4 +9,8 @@
  <tile id="5" type="dark_blue"/>
  <tile id="6" type="pink"/>
  <tile id="11" type="error"/>
+ <tile id="12" type="pulse_1"/>
+ <tile id="13" type="pulse_2"/>
+ <tile id="14" type="pulse_3"/>
+ <tile id="15" type="pulse_4"/>
 </tileset>
