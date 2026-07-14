@@ -13,4 +13,5 @@
  <tile id="13" type="pulse_2"/>
  <tile id="14" type="pulse_3"/>
  <tile id="15" type="pulse_4"/>
+ <tile id="20" type="cursor"/>
 </tileset>

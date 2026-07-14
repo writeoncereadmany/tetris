@@ -2,6 +2,7 @@ pub mod titlescreen;
 pub mod gamescreen;
 pub mod transitions;
 pub mod loadscreen;
+pub mod highscorescreen;
 
 use engine::events::event::{Event, Events};
 use engine::renderer::asset_renderer::AssetRenderer;

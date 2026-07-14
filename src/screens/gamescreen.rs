@@ -274,21 +274,21 @@ impl GameScreen {
             &format!("{}", self.score),
             "Spritefont_Medium",
             280,
-            144,
+            136,
             Alignment::aligned(HorizontalAlignment::RIGHT, VerticalAlignment::BOTTOM)
         );
         renderer.draw_text(
             &format!("{}", self.lines),
             "Spritefont_Medium",
             280,
-            104,
+            96,
             Alignment::aligned(HorizontalAlignment::RIGHT, VerticalAlignment::BOTTOM)
         );
         renderer.draw_text(
             &format!("{}", self.level),
             "Spritefont_Medium",
             280,
-            64,
+            56,
             Alignment::aligned(HorizontalAlignment::RIGHT, VerticalAlignment::BOTTOM)
         );
     }
