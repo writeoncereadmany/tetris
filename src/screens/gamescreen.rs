@@ -332,7 +332,7 @@ impl GameScreen {
             self.next_down_timer = events.schedule("Game", Self::drop_time(self.level), Action::Down);
         } else {
             self.game_over = true;
-            events.schedule("Game", Duration::from_secs_f64(2.0), GameOver());
+            events.schedule("Game", Duration::from_secs_f64(2.0), GameOver { score: self.score });
         }
     }
 }

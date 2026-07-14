@@ -7,4 +7,4 @@ pub struct StartGame();
 pub struct Loaded();
 
 #[derive(Event)]
-pub struct GameOver();
+pub struct GameOver { pub score: u32 }

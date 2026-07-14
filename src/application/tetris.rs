@@ -82,7 +82,7 @@ impl Tetris {
         event.apply(|StartGame()| {
             self.screen = Box::new(GameScreen::new(renderer, &self.assets, events));
         });
-        event.apply(|GameOver()| {
+        event.apply(|GameOver { score }| {
             self.screen = Box::new(TitleScreen::new(&self.assets, renderer));
         });
     }
