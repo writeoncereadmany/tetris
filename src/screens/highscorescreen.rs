@@ -115,13 +115,13 @@ impl Screen for HighScoreScreen {
         renderer.clear_sprites();
         renderer.draw_text("High Scores", "Spritefont_Medium", 160, 144, Alignment::aligned(CENTER, BOTTOM));
         for (i, HighScore { name, score }) in self.high_scores.borrow().iter().enumerate() {
-            renderer.draw_text(&name, "Spritefont_Medium", 80, 120 - (i*16) as i32, Alignment::aligned(LEFT, BOTTOM));
-            renderer.draw_text(&format!("{score}"), "Spritefont_Medium", 240, 120 - (i*16) as i32, Alignment::aligned(RIGHT, BOTTOM));
+            renderer.draw_text(&name, "Spritefont_Medium", 100, 120 - (i*16) as i32, Alignment::aligned(LEFT, BOTTOM));
+            renderer.draw_text(&format!("{score}"), "Spritefont_Medium", 220, 120 - (i*16) as i32, Alignment::aligned(RIGHT, BOTTOM));
         }
         if let (Some(index), Some(name)) = (self.new_score_index, self.new_score_name.as_ref()) {
             let mut name = name.clone();
             name.push(self.current_letter);
-            renderer.draw_text(&name, "Spritefont_Medium", 80, 120 - (index*16) as i32, Alignment::aligned(LEFT, BOTTOM));
+            renderer.draw_text(&name, "Spritefont_Medium", 100, 120 - (index*16) as i32, Alignment::aligned(LEFT, BOTTOM));
         }
     }
 }
