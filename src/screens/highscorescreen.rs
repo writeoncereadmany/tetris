@@ -9,6 +9,8 @@ use engine::renderer::spritefont::VerticalAlignment::BOTTOM;
 use rust_libretro::types::JoypadState;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::Duration;
+use crate::input::{KeyRepeater, KeysRepeater};
 
 pub struct HighScore {
     name: String,
@@ -26,6 +28,7 @@ pub struct HighScoreScreen {
     new_score_name: Option<String>,
     new_score_index: Option<usize>,
     current_letter: char,
+    keys_repeater: KeysRepeater
 }
 
 impl HighScoreScreen {
@@ -38,7 +41,16 @@ impl HighScoreScreen {
             updated_scores.truncate(5);
         }
         let new_score_name = new_score_index.map(|index| String::new());
-        HighScoreScreen { high_scores, new_score_name, new_score_index, current_letter: 'A' }
+        HighScoreScreen {
+            high_scores,
+            new_score_name,
+            new_score_index,
+            current_letter: 'A',
+            keys_repeater: KeysRepeater::new(vec![
+                KeyRepeater::new(JoypadState::LEFT, Duration::from_secs_f64(0.3), Duration::from_secs_f64(0.1)),
+                KeyRepeater::new(JoypadState::RIGHT, Duration::from_secs_f64(0.3), Duration::from_secs_f64(0.1)),
+            ]),
+        }
     }
 
     fn find_score_position(high_scores: &Rc<RefCell<Vec<HighScore>>>, score: u32) -> Option<usize> {
@@ -87,6 +99,7 @@ impl HighScoreScreen {
 
 impl Screen for HighScoreScreen {
     fn on_event(&mut self, event: &Event, events: &mut Events) {
+        self.keys_repeater.on_event(event, events);
         event.apply(| ButtonPressed(button) | {
             if (button == &JoypadState::START) {
                 events.fire(StartGame())

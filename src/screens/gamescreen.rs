@@ -12,6 +12,7 @@ use engine::renderer::asset_renderer::AssetRenderer;
 use engine::renderer::spritefont::{Alignment, HorizontalAlignment, VerticalAlignment};
 use rust_libretro::types::JoypadState;
 use std::time::{Duration, Instant, SystemTime};
+use crate::input::{KeyRepeater, KeysRepeater};
 
 #[derive(Event)]
 struct NextPiecePlease();
@@ -49,7 +50,8 @@ pub struct GameScreen {
     next_down_timer: TimerId,
     score: u32,
     lines: u32,
-    level: u32
+    level: u32,
+    keys_repeater: KeysRepeater
 }
 
 impl GameScreen {
@@ -77,7 +79,12 @@ impl GameScreen {
             next_down_timer,
             score: 0,
             lines: 0,
-            level: 1
+            level: 1,
+            keys_repeater: KeysRepeater::new(vec![
+                KeyRepeater::new(JoypadState::LEFT, Duration::from_secs_f64(0.2), Duration::from_secs_f64(0.06)),
+                KeyRepeater::new(JoypadState::RIGHT, Duration::from_secs_f64(0.2), Duration::from_secs_f64(0.06)),
+                KeyRepeater::new(JoypadState::DOWN, Duration::from_secs_f64(0.06), Duration::from_secs_f64(0.06)),
+            ]),
         }
     }
 
@@ -336,6 +343,7 @@ fn draw_block(renderer: &mut AssetRenderer, block: &Block, x: i32, y: i32) {
 
 impl Screen for GameScreen {
     fn on_event(&mut self, event: &Event, events: &mut Events) {
+        self.keys_repeater.on_event(event, events);
         event.apply(|dt| events.elapse("Game", *dt));
 
         event.apply(|ButtonPressed(button)| self.listen_to_press(button, events));

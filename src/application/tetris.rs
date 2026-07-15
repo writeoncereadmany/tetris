@@ -23,7 +23,6 @@ pub struct Tetris {
     assets: Arc<Assets>,
     screen: Box<dyn Screen>,
     previous_joypad_state: JoypadState,
-    key_repeater: KeysRepeater,
     high_scores: Rc<RefCell<Vec<HighScore>>>,
 }
 
@@ -43,11 +42,6 @@ impl Application for Tetris {
             assets: assets.clone(),
             screen: Box::new(LoadScreen),
             previous_joypad_state : JoypadState::empty(),
-            key_repeater: KeysRepeater::new(vec![
-                KeyRepeater::new(JoypadState::LEFT, Duration::from_secs_f64(0.2), Duration::from_secs_f64(0.06)),
-                KeyRepeater::new(JoypadState::RIGHT, Duration::from_secs_f64(0.2), Duration::from_secs_f64(0.06)),
-                KeyRepeater::new(JoypadState::DOWN, Duration::from_secs_f64(0.06), Duration::from_secs_f64(0.06)),
-            ]),
             high_scores: Rc::new(RefCell::new(vec!(
                 HighScore::new("BETTY".to_string(), 100_000),
                 HighScore::new("TOMMY".to_string(), 50_000),
@@ -103,7 +97,6 @@ impl Tetris {
         event.apply(|GameOver { score }| {
             self.screen = Box::new(HighScoreScreen::new(self.high_scores.clone(), *score, renderer));
         });
-        self.key_repeater.on_event(event, events);
     }
 
     fn process_events(&mut self, renderer: &mut AssetRenderer, events: &mut Events) {
