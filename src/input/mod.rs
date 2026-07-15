@@ -39,13 +39,13 @@ impl KeysRepeater {
     fn queue_repeat(&mut self, button: &JoypadState, events: &mut Events) {
         if let Some(repeater) = self.repeaters.get_mut(button) {
             let repeat_duration = if repeater.repeat_timer == NO_TIMER_ID { repeater.initial_repeat } else { repeater.subsequent_repeat };
-            repeater.repeat_timer = events.schedule("Game", repeat_duration, ButtonPressed(button.clone()));
+            repeater.repeat_timer = events.schedule("Application", repeat_duration, ButtonPressed(button.clone()));
         }
     }
 
     fn cancel_repeat(&mut self, button: &JoypadState, events: &mut Events) {
         if let Some(repeater) = self.repeaters.get_mut(button) {
-            events.cancel("Game", &repeater.repeat_timer);
+            events.cancel("Application", &repeater.repeat_timer);
             repeater.repeat_timer = NO_TIMER_ID;
         }
     }

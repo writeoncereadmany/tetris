@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
 use engine::assets::Assets;
@@ -9,6 +11,7 @@ use rust_libretro::contexts::AudioContext;
 use rust_libretro::input_descriptors;
 use rust_libretro::sys::{retro_input_descriptor, RETRO_DEVICE_ID_JOYPAD_A, RETRO_DEVICE_ID_JOYPAD_B, RETRO_DEVICE_ID_JOYPAD_DOWN, RETRO_DEVICE_ID_JOYPAD_LEFT, RETRO_DEVICE_ID_JOYPAD_RIGHT, RETRO_DEVICE_ID_JOYPAD_START, RETRO_DEVICE_ID_JOYPAD_UP, RETRO_DEVICE_JOYPAD};
 use rust_libretro::types::JoypadState;
+use crate::input::{KeyRepeater, KeysRepeater};
 use crate::screens::gamescreen::GameScreen;
 use crate::screens::highscorescreen::{HighScore, HighScoreScreen};
 use crate::screens::loadscreen::LoadScreen;
@@ -20,7 +23,8 @@ pub struct Tetris {
     assets: Arc<Assets>,
     screen: Box<dyn Screen>,
     previous_joypad_state: JoypadState,
-    high_scores: Arc<Vec<HighScore>>,
+    key_repeater: KeysRepeater,
+    high_scores: Rc<RefCell<Vec<HighScore>>>,
 }
 
 const INPUT_DESCRIPTORS: &[retro_input_descriptor] = &input_descriptors!(
@@ -39,13 +43,18 @@ impl Application for Tetris {
             assets: assets.clone(),
             screen: Box::new(LoadScreen),
             previous_joypad_state : JoypadState::empty(),
-            high_scores: Arc::new(vec!(
-                HighScore::new("Betty".to_string(), 100_000),
-                HighScore::new("Tommy".to_string(), 50_000),
-                HighScore::new("Cilla".to_string(), 20_000),
-                HighScore::new("Lana".to_string(), 10_000),
-                HighScore::new("Max".to_string(), 5_000),
-            ))
+            key_repeater: KeysRepeater::new(vec![
+                KeyRepeater::new(JoypadState::LEFT, Duration::from_secs_f64(0.2), Duration::from_secs_f64(0.06)),
+                KeyRepeater::new(JoypadState::RIGHT, Duration::from_secs_f64(0.2), Duration::from_secs_f64(0.06)),
+                KeyRepeater::new(JoypadState::DOWN, Duration::from_secs_f64(0.06), Duration::from_secs_f64(0.06)),
+            ]),
+            high_scores: Rc::new(RefCell::new(vec!(
+                HighScore::new("BETTY".to_string(), 100_000),
+                HighScore::new("TOMMY".to_string(), 50_000),
+                HighScore::new("CILLA".to_string(), 20_000),
+                HighScore::new("LANA".to_string(), 10_000),
+                HighScore::new("MAX".to_string(), 1_000),
+            )))
         }
     }
 
@@ -94,6 +103,7 @@ impl Tetris {
         event.apply(|GameOver { score }| {
             self.screen = Box::new(HighScoreScreen::new(self.high_scores.clone(), *score, renderer));
         });
+        self.key_repeater.on_event(event, events);
     }
 
     fn process_events(&mut self, renderer: &mut AssetRenderer, events: &mut Events) {
