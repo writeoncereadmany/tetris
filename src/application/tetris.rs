@@ -17,12 +17,14 @@ use rust_libretro::types::JoypadState;
 use std::os::raw::{c_uint, c_void};
 use std::sync::Arc;
 use std::time::Duration;
+use tracing_appender::non_blocking::WorkerGuard;
 
 pub struct Tetris {
     assets: Arc<Assets>,
     screen: Box<dyn Screen>,
     previous_joypad_state: JoypadState,
-    savegame: Savegame
+    savegame: Savegame,
+    pub logger_worker: Option<WorkerGuard>,
 }
 
 const INPUT_DESCRIPTORS: &[retro_input_descriptor] = &input_descriptors!(
@@ -41,7 +43,8 @@ impl Application for Tetris {
             assets: assets.clone(),
             screen: Box::new(LoadScreen),
             previous_joypad_state : JoypadState::empty(),
-            savegame: Savegame::new()
+            savegame: Savegame::new(),
+            logger_worker,
         }
     }
 

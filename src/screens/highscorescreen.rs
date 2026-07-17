@@ -23,7 +23,7 @@ impl HighScoreScreen {
     pub fn new(savegame: Savegame, score: u32, renderer: &mut AssetRenderer) -> Self {
         renderer.clear();
         let new_score_index = Self::find_score_position(&savegame, score);
-        let new_score_name = new_score_index.map(|index| String::new());
+        let new_score_name = new_score_index.map(|_| String::new());
         HighScoreScreen {
             high_scores: savegame,
             new_score_name,
@@ -84,16 +84,16 @@ impl Screen for HighScoreScreen {
     fn on_event(&mut self, event: &Event, events: &mut Events) {
         self.keys_repeater.on_event(event, events);
         event.apply(| ButtonPressed(button) | {
-            if (button == &JoypadState::START) {
+            if button == &JoypadState::START {
                 events.fire(StartGame())
             }
-            if (button == &JoypadState::SELECT) {
+            if button == &JoypadState::SELECT {
                 events.fire(Loaded())
             }
-            if (button == &JoypadState::RIGHT || button == &JoypadState::LEFT) {
+            if button == &JoypadState::RIGHT || button == &JoypadState::LEFT {
                 self.update_letter(button);
             }
-            if (button == &JoypadState::A || button == &JoypadState::B) {
+            if button == &JoypadState::A || button == &JoypadState::B {
                 if self.current_letter == ' ' {
                     self.set_name(events);
                 }

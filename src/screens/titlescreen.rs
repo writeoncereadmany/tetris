@@ -48,13 +48,13 @@ impl TitleScreen {
 impl Screen for TitleScreen {
     fn on_event(&mut self, event: &Event, events: &mut Events) {
         event.apply(|ButtonPressed(button)| {
-            if (button == &JoypadState::START) {
+            if button == &JoypadState::START {
                 match self.selection {
                     Selection::PlayTetris => events.fire(StartGame()),
                     Selection::HighScores => events.fire(GameOver { score: 0 })
                 }
             }
-            if (button == &JoypadState::UP || button == &JoypadState::DOWN) {
+            if button == &JoypadState::UP || button == &JoypadState::DOWN {
                 match self.selection {
                     Selection::PlayTetris => self.selection = Selection::HighScores,
                     Selection::HighScores => self.selection = Selection::PlayTetris,

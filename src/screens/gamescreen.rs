@@ -11,7 +11,7 @@ use engine::events::timer::TimerId;
 use engine::renderer::asset_renderer::AssetRenderer;
 use engine::renderer::spritefont::{Alignment, HorizontalAlignment, VerticalAlignment};
 use rust_libretro::types::JoypadState;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, SystemTime};
 use crate::input::{KeyRepeater, KeysRepeater};
 
 #[derive(Event)]

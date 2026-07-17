@@ -8,7 +8,7 @@ pub struct LoadScreen;
 
 impl Screen for LoadScreen {
     fn on_event(&mut self, event: &Event, events: &mut Events) {
-        event.apply(|dt: &Duration| {
+        event.apply(|_dt: &Duration| {
             events.fire(Loaded());
         });
     }
