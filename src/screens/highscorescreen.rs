@@ -13,8 +13,9 @@ use std::time::Duration;
 
 pub struct HighScoreScreen {
     high_scores: Savegame,
-    new_score_name: Option<String>,
-    new_score_index: Option<usize>,
+    score: u32,
+    score_submitted: bool,
+    new_score_name: String,
     current_letter: char,
     keys_repeater: KeysRepeater
 }
@@ -22,27 +23,18 @@ pub struct HighScoreScreen {
 impl HighScoreScreen {
     pub fn new(savegame: Savegame, score: u32, renderer: &mut AssetRenderer) -> Self {
         renderer.clear();
-        let new_score_index = Self::find_score_position(&savegame, score);
-        let new_score_name = new_score_index.map(|_| String::new());
+        let new_score_name = String::new();
         HighScoreScreen {
             high_scores: savegame,
+            score,
             new_score_name,
-            new_score_index,
+            score_submitted: false,
             current_letter: 'A',
             keys_repeater: KeysRepeater::new(vec![
                 KeyRepeater::new(JoypadState::LEFT, Duration::from_secs_f64(0.3), Duration::from_secs_f64(0.1)),
                 KeyRepeater::new(JoypadState::RIGHT, Duration::from_secs_f64(0.3), Duration::from_secs_f64(0.1)),
             ]),
         }
-    }
-
-    fn find_score_position(savegame: &Savegame, score: u32) -> Option<usize> {
-        for (index, high_score) in savegame.high_scores.iter().enumerate() {
-            if high_score.score < score {
-                return Some(index);
-            }
-        }
-        None
     }
 
     fn update_letter(&mut self, input: &JoypadState) {
@@ -72,11 +64,8 @@ impl HighScoreScreen {
     }
 
     fn set_name(&mut self, events: &mut Events) {
-        if let (Some(index), Some(name)) = (self.new_score_index, self.new_score_name.as_ref()) {
-            events.fire(NewHighScore(name.clone(), self.high_scores.high_scores[index].score));
-        }
-        self.new_score_name = None;
-        self.new_score_index = None;
+        events.fire(NewHighScore(self.new_score_name.clone(), self.score));
+        self.score_submitted = true;
     }
 }
 
@@ -85,23 +74,23 @@ impl Screen for HighScoreScreen {
         self.keys_repeater.on_event(event, events);
         event.apply(| ButtonPressed(button) | {
             if button == &JoypadState::START {
-                events.fire(StartGame())
-            }
-            if button == &JoypadState::SELECT {
                 events.fire(Loaded())
             }
             if button == &JoypadState::RIGHT || button == &JoypadState::LEFT {
                 self.update_letter(button);
             }
             if button == &JoypadState::A || button == &JoypadState::B {
+                if self.score_submitted {
+                    return;
+                }
                 if self.current_letter == ' ' {
                     self.set_name(events);
                 }
                 else {
-                    self.new_score_name.as_mut().map(|name| name.push(self.current_letter));
-                    if self.new_score_name.as_ref().map(|name| name.len() == 5).unwrap_or(false) {
-                        self.set_name(events);
-                    }
+                        self.new_score_name.push(self.current_letter);
+                        if self.new_score_name.len() == 5 {
+                            self.set_name(events);
+                        }
                 }
             }
         });
@@ -110,14 +99,25 @@ impl Screen for HighScoreScreen {
     fn draw(&mut self, renderer: &mut AssetRenderer) {
         renderer.clear_sprites();
         renderer.draw_text("High Scores", "Spritefont_Medium", 160, 144, Alignment::aligned(CENTER, BOTTOM));
+        let mut new_score_drawn = false;
+
         for (i, SavableHighScore { name, score }) in self.high_scores.high_scores.iter().enumerate() {
-            renderer.draw_text(&str::from_utf8(name).unwrap(), "Spritefont_Medium", 100, 120 - (i*16) as i32, Alignment::aligned(LEFT, BOTTOM));
-            renderer.draw_text(&format!("{score}"), "Spritefont_Medium", 220, 120 - (i*16) as i32, Alignment::aligned(RIGHT, BOTTOM));
-        }
-        if let (Some(index), Some(name)) = (self.new_score_index, self.new_score_name.as_ref()) {
-            let mut name = name.clone();
-            name.push(self.current_letter);
-            renderer.draw_text(&name, "Spritefont_Medium", 100, 120 - (index*16) as i32, Alignment::aligned(LEFT, BOTTOM));
+            if &self.score > score && !new_score_drawn {
+                let mut name = self.new_score_name.clone();
+                if !self.score_submitted {
+                    name.push(self.current_letter);
+                }
+                renderer.draw_text(&name, "Spritefont_Medium", 100, 120 - (i * 16) as i32, Alignment::aligned(LEFT, BOTTOM));
+                renderer.draw_text(&format!("{}", self.score), "Spritefont_Medium", 220, 120 - (i*16) as i32, Alignment::aligned(RIGHT, BOTTOM));
+                new_score_drawn = true;
+            }
+
+            let i = i + if new_score_drawn { 1 } else { 0 };
+
+            if i < 5 {
+                renderer.draw_text(&str::from_utf8(name).unwrap(), "Spritefont_Medium", 100, 120 - (i*16) as i32, Alignment::aligned(LEFT, BOTTOM));
+                renderer.draw_text(&format!("{score}"), "Spritefont_Medium", 220, 120 - (i*16) as i32, Alignment::aligned(RIGHT, BOTTOM));
+            }
         }
     }
 }
