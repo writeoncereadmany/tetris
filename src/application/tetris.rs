@@ -1,29 +1,28 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::sync::Arc;
-use std::time::Duration;
+use crate::application::savegame::Savegame;
+use crate::screens::gamescreen::GameScreen;
+use crate::screens::highscorescreen::{HighScoreScreen};
+use crate::screens::loadscreen::LoadScreen;
+use crate::screens::titlescreen::TitleScreen;
+use crate::screens::transitions::{GameOver, Loaded, StartGame};
+use crate::screens::Screen;
 use engine::assets::Assets;
 use engine::events::event::{Event, Events};
 use engine::events::input::fire_input_events;
 use engine::renderer::asset_renderer::AssetRenderer;
 use engine::retroarch::{Application, ApplicationProperties};
-use rust_libretro::contexts::AudioContext;
+use rust_libretro::contexts::{AudioContext, GetMemoryDataContext, GetMemorySizeContext};
 use rust_libretro::input_descriptors;
 use rust_libretro::sys::{retro_input_descriptor, RETRO_DEVICE_ID_JOYPAD_A, RETRO_DEVICE_ID_JOYPAD_B, RETRO_DEVICE_ID_JOYPAD_DOWN, RETRO_DEVICE_ID_JOYPAD_LEFT, RETRO_DEVICE_ID_JOYPAD_RIGHT, RETRO_DEVICE_ID_JOYPAD_START, RETRO_DEVICE_ID_JOYPAD_UP, RETRO_DEVICE_JOYPAD};
 use rust_libretro::types::JoypadState;
-use crate::input::{KeyRepeater, KeysRepeater};
-use crate::screens::gamescreen::GameScreen;
-use crate::screens::highscorescreen::{HighScore, HighScoreScreen};
-use crate::screens::loadscreen::LoadScreen;
-use crate::screens::Screen;
-use crate::screens::titlescreen::TitleScreen;
-use crate::screens::transitions::{GameOver, Loaded, StartGame};
+use std::os::raw::{c_uint, c_void};
+use std::sync::Arc;
+use std::time::Duration;
 
 pub struct Tetris {
     assets: Arc<Assets>,
     screen: Box<dyn Screen>,
     previous_joypad_state: JoypadState,
-    high_scores: Rc<RefCell<Vec<HighScore>>>,
+    savegame: Savegame
 }
 
 const INPUT_DESCRIPTORS: &[retro_input_descriptor] = &input_descriptors!(
@@ -42,13 +41,7 @@ impl Application for Tetris {
             assets: assets.clone(),
             screen: Box::new(LoadScreen),
             previous_joypad_state : JoypadState::empty(),
-            high_scores: Rc::new(RefCell::new(vec!(
-                HighScore::new("BETTY".to_string(), 100_000),
-                HighScore::new("TOMMY".to_string(), 50_000),
-                HighScore::new("CILLA".to_string(), 20_000),
-                HighScore::new("LANA".to_string(), 10_000),
-                HighScore::new("MAX".to_string(), 1_000),
-            )))
+            savegame: Savegame::new()
         }
     }
 
@@ -75,6 +68,8 @@ impl Application for Tetris {
         // nothing yet
     }
 
+
+
     fn properties() -> ApplicationProperties {
         ApplicationProperties {
             width: 320,
@@ -83,6 +78,14 @@ impl Application for Tetris {
             extensions: &["ttr"],
             input_descriptors: INPUT_DESCRIPTORS,
         }
+    }
+
+    fn get_memory_data(&mut self, _id: c_uint, _ctx: &mut GetMemoryDataContext) -> *mut c_void {
+        &raw const self.savegame as *mut c_void
+    }
+
+    fn get_memory_size(&mut self, _id: c_uint, _ctx: &mut GetMemorySizeContext) -> usize {
+        size_of::<Savegame>()
     }
 }
 
@@ -95,8 +98,9 @@ impl Tetris {
             self.screen = Box::new(GameScreen::new(renderer, &self.assets, events));
         });
         event.apply(|GameOver { score }| {
-            self.screen = Box::new(HighScoreScreen::new(self.high_scores.clone(), *score, renderer));
+            self.screen = Box::new(HighScoreScreen::new(self.savegame.clone(), *score, renderer));
         });
+        event.apply(|new_score| {self.savegame.add_score(new_score)});
     }
 
     fn process_events(&mut self, renderer: &mut AssetRenderer, events: &mut Events) {

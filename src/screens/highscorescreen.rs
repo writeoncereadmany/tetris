@@ -1,3 +1,5 @@
+use crate::application::savegame::{NewHighScore, SavableHighScore, Savegame};
+use crate::input::{KeyRepeater, KeysRepeater};
 use crate::screens::transitions::{Loaded, StartGame};
 use crate::screens::Screen;
 use engine::events::event::{Event, Events};
@@ -7,24 +9,10 @@ use engine::renderer::spritefont::Alignment;
 use engine::renderer::spritefont::HorizontalAlignment::{CENTER, LEFT, RIGHT};
 use engine::renderer::spritefont::VerticalAlignment::BOTTOM;
 use rust_libretro::types::JoypadState;
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::time::Duration;
-use crate::input::{KeyRepeater, KeysRepeater};
-
-pub struct HighScore {
-    name: String,
-    score: u32
-}
-
-impl HighScore {
-    pub fn new(name: String, score: u32) -> Self {
-        Self { name, score }
-    }
-}
 
 pub struct HighScoreScreen {
-    high_scores: Rc<RefCell<Vec<HighScore>>>,
+    high_scores: Savegame,
     new_score_name: Option<String>,
     new_score_index: Option<usize>,
     current_letter: char,
@@ -32,17 +20,12 @@ pub struct HighScoreScreen {
 }
 
 impl HighScoreScreen {
-    pub fn new(high_scores: Rc<RefCell<Vec<HighScore>>>, score: u32, renderer: &mut AssetRenderer) -> Self {
+    pub fn new(savegame: Savegame, score: u32, renderer: &mut AssetRenderer) -> Self {
         renderer.clear();
-        let new_score_index = Self::find_score_position(&high_scores, score);
-        if let Some(index) = new_score_index {
-            let mut updated_scores = high_scores.borrow_mut();
-            updated_scores.insert(index, HighScore::new("".to_string(), score));
-            updated_scores.truncate(5);
-        }
+        let new_score_index = Self::find_score_position(&savegame, score);
         let new_score_name = new_score_index.map(|index| String::new());
         HighScoreScreen {
-            high_scores,
+            high_scores: savegame,
             new_score_name,
             new_score_index,
             current_letter: 'A',
@@ -53,8 +36,8 @@ impl HighScoreScreen {
         }
     }
 
-    fn find_score_position(high_scores: &Rc<RefCell<Vec<HighScore>>>, score: u32) -> Option<usize> {
-        for (index, high_score) in high_scores.borrow().iter().enumerate() {
+    fn find_score_position(savegame: &Savegame, score: u32) -> Option<usize> {
+        for (index, high_score) in savegame.high_scores.iter().enumerate() {
             if high_score.score < score {
                 return Some(index);
             }
@@ -88,9 +71,9 @@ impl HighScoreScreen {
         self.current_letter = new_char;
     }
 
-    fn set_name(&mut self) {
+    fn set_name(&mut self, events: &mut Events) {
         if let (Some(index), Some(name)) = (self.new_score_index, self.new_score_name.as_ref()) {
-            self.high_scores.borrow_mut().get_mut(index).unwrap().name = name.clone();
+            events.fire(NewHighScore(name.clone(), self.high_scores.high_scores[index].score));
         }
         self.new_score_name = None;
         self.new_score_index = None;
@@ -112,12 +95,12 @@ impl Screen for HighScoreScreen {
             }
             if (button == &JoypadState::A || button == &JoypadState::B) {
                 if self.current_letter == ' ' {
-                    self.set_name();
+                    self.set_name(events);
                 }
                 else {
                     self.new_score_name.as_mut().map(|name| name.push(self.current_letter));
                     if self.new_score_name.as_ref().map(|name| name.len() == 5).unwrap_or(false) {
-                        self.set_name();
+                        self.set_name(events);
                     }
                 }
             }
@@ -127,8 +110,8 @@ impl Screen for HighScoreScreen {
     fn draw(&mut self, renderer: &mut AssetRenderer) {
         renderer.clear_sprites();
         renderer.draw_text("High Scores", "Spritefont_Medium", 160, 144, Alignment::aligned(CENTER, BOTTOM));
-        for (i, HighScore { name, score }) in self.high_scores.borrow().iter().enumerate() {
-            renderer.draw_text(&name, "Spritefont_Medium", 100, 120 - (i*16) as i32, Alignment::aligned(LEFT, BOTTOM));
+        for (i, SavableHighScore { name, score }) in self.high_scores.high_scores.iter().enumerate() {
+            renderer.draw_text(&str::from_utf8(name).unwrap(), "Spritefont_Medium", 100, 120 - (i*16) as i32, Alignment::aligned(LEFT, BOTTOM));
             renderer.draw_text(&format!("{score}"), "Spritefont_Medium", 220, 120 - (i*16) as i32, Alignment::aligned(RIGHT, BOTTOM));
         }
         if let (Some(index), Some(name)) = (self.new_score_index, self.new_score_name.as_ref()) {
