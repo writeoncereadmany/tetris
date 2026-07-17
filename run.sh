@@ -1,1 +1,1 @@
-/Applications/RetroArch.app/Contents/MacOS/RetroArch -f --verbose -L target/release/libtetris.dylib tetris.ttr
+/Applications/RetroArch.app/Contents/MacOS/RetroArch -f -L target/release/libtetris.dylib tetris.ttr
